@@ -14,12 +14,12 @@ endif
 
 SRC = src/chess/*.cpp src/*.cpp
 
-.PHONY: all lys clean makedir
+.PHONY: all blueberry clean makedir
 
-all: lys
+all: blueberry
 
-lys: makedir
-	@$(CXX) $(CXXFLAGS) $(SRC) -o bin/lys.exe
+blueberry: makedir
+	@$(CXX) $(CXXFLAGS) $(SRC) -o bin/blueberry.exe
 
 clean: makedir
 	@rm -rf bin
@@ -28,4 +28,4 @@ clean: makedir
 makedir:
 	@mkdir -p bin
 
-.DEFAULT_GOAL := lys
+.DEFAULT_GOAL := blueberry
