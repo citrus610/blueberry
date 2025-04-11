@@ -3,12 +3,10 @@
 #include "piece.h"
 #include "square.h"
 
-// bit 0- 5: destination square
-// bit 6-11: origin square
-// bit 12-13: promotion piece type
-// bit 14-15: move type: promotion, en passant, castling
-namespace chess::move
+namespace move
 {
+
+constexpr usize MAX_MOVE = 256;
 
 constexpr u16 NONE_MOVE = 0;
 constexpr u16 NULL_MOVE = 65;
@@ -23,7 +21,7 @@ constexpr u16 CASTLING = 3 << 14;
 
 };
 
-[[nodiscard]] constexpr u16 get(i8 square_from, i8 square_to) noexcept
+constexpr u16 create(i8 square_from, i8 square_to)
 {
     assert(square::is_valid(square_from));
     assert(square::is_valid(square_to));
@@ -32,31 +30,31 @@ constexpr u16 CASTLING = 3 << 14;
 };
 
 template <u16 T = type::NORMAL>
-[[nodiscard]] constexpr u16 get_make(i8 square_from, i8 square_to, i8 piece_type = piece::type::KNIGHT) noexcept
+constexpr u16 get_make(i8 square_from, i8 square_to, i8 promotion_type = piece::type::KNIGHT)
 {
     assert(square::is_valid(square_from));
     assert(square::is_valid(square_to));
-    assert(piece_type >= piece::type::KNIGHT && piece_type <= piece::type::QUEEN);
+    assert(promotion_type >= piece::type::KNIGHT && promotion_type <= piece::type::QUEEN);
     
-    return T + ((piece_type - piece::type::KNIGHT) << 12) + (square_from << 6) + square_to;
+    return T + ((promotion_type - piece::type::KNIGHT) << 12) + (square_from << 6) + square_to;
 };
 
-[[nodiscard]] constexpr i8 get_square_from(u16 move) noexcept
+constexpr i8 get_square_from(u16 move)
 {
     return (move >> 6) & 0x3F;
 };
 
-[[nodiscard]] constexpr i8 get_square_to(u16 move) noexcept
+constexpr i8 get_square_to(u16 move)
 {
     return move & 0x3F;
 };
 
-[[nodiscard]] constexpr u16 get_type(u16 move) noexcept
+constexpr u16 get_type(u16 move)
 {
     return move & (3 << 14);
 };
 
-[[nodiscard]] constexpr i8 get_promotion_type(u16 move) noexcept
+constexpr i8 get_promotion_type(u16 move)
 {
     return i8((move >> 12) & 3) + piece::type::KNIGHT;
 };

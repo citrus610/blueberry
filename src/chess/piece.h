@@ -2,7 +2,7 @@
 
 #include "color.h"
 
-namespace chess::piece::type
+namespace piece::type
 {
 
 enum : i8
@@ -16,12 +16,7 @@ enum : i8
     NONE = -1
 };
 
-[[nodiscard]] constexpr bool is_valid(i8 piece_type) noexcept
-{
-    return piece_type >= piece::type::PAWN && piece_type <= piece::type::KING;
-};
-
-[[nodiscard]] constexpr i8 get(char c) noexcept
+constexpr i8 create(char c)
 {
     if (c == 'P' || c == 'p') {
         return piece::type::PAWN;
@@ -45,7 +40,12 @@ enum : i8
     return piece::type::NONE;
 };
 
-[[nodiscard]] constexpr char get_char(i8 piece_type) noexcept
+constexpr bool is_valid(i8 piece_type)
+{
+    return piece_type >= piece::type::PAWN && piece_type <= piece::type::KING;
+};
+
+constexpr char get_char(i8 piece_type)
 {
     assert(piece::type::is_valid(piece_type));
 
@@ -59,7 +59,7 @@ enum : i8
 
 };
 
-namespace chess::piece
+namespace piece
 {
 
 enum : i8
@@ -79,19 +79,18 @@ enum : i8
     NONE = -1
 };
 
-[[nodiscard]] constexpr bool is_valid(i8 piece) noexcept
+constexpr i8 create(i8 piece_type, i8 color)
 {
-    return piece >= piece::WHITE_PAWN && piece <= piece::BLACK_KING;
-};
-
-[[nodiscard]] constexpr i8 get(i8 piece_type, i8 color) noexcept
-{
+    assert(piece::type::is_valid(piece_type));
+    assert(color::is_valid(color));
+    
     return piece_type * 2 + color;
 };
 
-[[nodiscard]] constexpr i8 get(char c) noexcept
+constexpr i8 create(char c)
 {
-    switch (c) {
+    switch (c)
+    {
     case 'P':
         return piece::WHITE_PAWN;
     case 'N':
@@ -116,36 +115,31 @@ enum : i8
         return piece::BLACK_QUEEN;
     case 'k':
         return piece::BLACK_KING;
-    default:
-        break;
     }
 
     return piece::NONE;
 };
 
-[[nodiscard]] constexpr i8 get(i8 piece_type, i8 color) noexcept
+constexpr bool is_valid(i8 piece)
 {
-    assert(piece::type::is_valid(piece_type));
-    assert(color::is_valid(color));
-
-    return piece_type * 2 + color;
+    return piece >= piece::WHITE_PAWN && piece <= piece::BLACK_KING;
 };
 
-[[nodiscard]] constexpr i8 get_type(i8 piece) noexcept
+constexpr i8 get_type(i8 piece)
 {
     assert(piece::is_valid(piece));
 
     return piece / 2;
 };
 
-[[nodiscard]] constexpr i8 get_color(i8 piece) noexcept
+constexpr i8 get_color(i8 piece)
 {
     assert(piece::is_valid(piece));
     
     return piece & 1;
 };
 
-[[nodiscard]] constexpr char get_char(i8 piece) noexcept
+constexpr char get_char(i8 piece)
 {
     if (!piece::is_valid(piece)) {
         return '.';

@@ -7,9 +7,13 @@ CXXPROF += -s
 endif
 
 ifeq ($(BUILD), debug)
-CXXFLAGS += -fdiagnostics-color=always -DUNICODE -std=c++20 -Wall -Og -pg -no-pie
+CXXFLAGS += -fdiagnostics-color=always -DUNICODE -std=c++20 -Wall -Og -g -no-pie
 else
-CXXFLAGS += -DUNICODE -DNDEBUG -std=c++20 -O3 -msse4 -mbmi2 -flto $(CXXPROF) -march=native
+CXXFLAGS += -DUNICODE -DNDEBUG -std=c++20 -O3 -flto $(CXXPROF) -march=native
+endif
+
+ifeq ($(PEXT), true)
+CXXFLAGS += -DUSE_PEXT
 endif
 
 SRC = src/chess/*.cpp src/*.cpp

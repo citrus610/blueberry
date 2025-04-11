@@ -2,7 +2,7 @@
 
 #include "color.h"
 
-namespace chess::direction
+namespace direction
 {
 
 enum : i8
@@ -17,7 +17,7 @@ enum : i8
     SOUTH_EAST = -7
 };
 
-[[nodiscard]] constexpr i8 get_color_direction(i8 direction, i8 color) noexcept
+constexpr i8 get_color_direction(i8 direction, i8 color)
 {
     assert(color::is_valid(color));
     
@@ -26,7 +26,7 @@ enum : i8
 
 };
 
-namespace chess::file
+namespace file
 {
 
 enum : i8
@@ -42,12 +42,7 @@ enum : i8
     NONE = -1
 };
 
-[[nodiscard]] constexpr bool is_valid(i8 file) noexcept
-{
-    return file >= file::FILE_A && file <= file::FILE_H;
-};
-
-[[nodiscard]] constexpr i8 get(char c) noexcept
+constexpr i8 create(char c)
 {
     if (c < 'a' || c > 'h') {
         return file::NONE;
@@ -56,7 +51,12 @@ enum : i8
     return c - 'a';
 };
 
-[[nodiscard]] constexpr char get_char(i8 file) noexcept
+constexpr bool is_valid(i8 file)
+{
+    return file >= file::FILE_A && file <= file::FILE_H;
+};
+
+constexpr char get_char(i8 file)
 {
     assert(file::is_valid(file));
 
@@ -65,7 +65,7 @@ enum : i8
 
 };
 
-namespace chess::rank
+namespace rank
 {
 
 enum : i8
@@ -81,20 +81,7 @@ enum : i8
     NONE = -1
 };
 
-[[nodiscard]] constexpr bool is_valid(i8 rank) noexcept
-{
-    return rank >= rank::RANK_1 && rank <= rank::RANK_8;
-};
-
-[[nodiscard]] constexpr bool is_back_rank(i8 rank, i8 color) noexcept
-{
-    assert(rank::is_valid(rank));
-    assert(color::is_valid(color));
-
-    return color == color::WHITE ? rank == rank::RANK_1 : rank == rank::RANK_8;
-};
-
-[[nodiscard]] constexpr i8 get(char c) noexcept
+constexpr i8 create(char c)
 {
     if (c < '1' || c > '8'){
         return rank::NONE;
@@ -103,7 +90,20 @@ enum : i8
     return c - '1';
 };
 
-[[nodiscard]] constexpr i8 get_color_rank(i8 rank, i8 color) noexcept
+constexpr bool is_valid(i8 rank)
+{
+    return rank >= rank::RANK_1 && rank <= rank::RANK_8;
+};
+
+constexpr bool is_back_rank(i8 rank, i8 color)
+{
+    assert(rank::is_valid(rank));
+    assert(color::is_valid(color));
+
+    return color == color::WHITE ? rank == rank::RANK_1 : rank == rank::RANK_8;
+};
+
+constexpr i8 get_color_rank(i8 rank, i8 color)
 {
     assert(rank::is_valid(rank));
     assert(color::is_valid(color));
@@ -111,14 +111,14 @@ enum : i8
     return color == color::WHITE ? rank : rank::RANK_8 - rank;
 };
 
-[[nodiscard]] constexpr i8 get_back_rank(i8 color) noexcept
+constexpr i8 get_back_rank(i8 color)
 {
     assert(color::is_valid(color));
 
     return color == color::WHITE ? rank::RANK_1 : rank::RANK_8;
 };
 
-[[nodiscard]] constexpr char get_char(i8 rank) noexcept
+constexpr char get_char(i8 rank)
 {
     assert(rank::is_valid(rank));
 
@@ -127,7 +127,7 @@ enum : i8
 
 };
 
-namespace chess::square
+namespace square
 {
 
 enum : i8
@@ -143,12 +143,7 @@ enum : i8
     NONE = -1
 };
 
-[[nodiscard]] constexpr bool is_valid(i8 square) noexcept
-{
-    return square >= square::A1 && square <= square::H8;
-};
-
-[[nodiscard]] constexpr i8 get(i8 file, i8 rank) noexcept
+constexpr i8 create(i8 file, i8 rank)
 {
     assert(file::is_valid(file));
     assert(rank::is_valid(rank));
@@ -156,40 +151,98 @@ enum : i8
     return file | (rank << 3);
 };
 
-[[nodiscard]] constexpr i8 get_file(i8 square) noexcept
+constexpr bool is_valid(i8 square)
+{
+    return square >= square::A1 && square <= square::H8;
+};
+
+constexpr bool is_light(i8 square)
+{
+    assert(square::is_valid(square));
+
+    return (square / 8 + square % 8) % 2 == 0;
+};
+
+constexpr bool is_dark(i8 square)
+{
+    assert(square::is_valid(square));
+
+    return square::is_light(square);
+};
+
+constexpr bool is_same_color(i8 square_1, i8 square_2)
+{
+    assert(square::is_valid(square_1));
+    assert(square::is_valid(square_2));
+
+    return ((9 * (square_1 ^ square_2)) & 8) == 0;
+};
+
+constexpr i8 get_file(i8 square)
 {
     assert(square::is_valid(square));
     
     return square & 7;
 };
 
-[[nodiscard]] constexpr i8 get_rank(i8 square) noexcept
+constexpr i8 get_rank(i8 square)
 {
     assert(square::is_valid(square));
 
     return square >> 3;
 };
 
-[[nodiscard]] constexpr i8 get_flip_file(i8 square) noexcept
+constexpr i8 get_flip_file(i8 square)
 {
     assert(square::is_valid(square));
 
     return square ^ 7;
 };
 
-[[nodiscard]] constexpr i8 get_flip_rank(i8 square) noexcept
+constexpr i8 get_flip_rank(i8 square)
 {
     assert(square::is_valid(square));
 
     return square ^ 56;
 };
 
-[[nodiscard]] constexpr i8 get_relative(i8 square, i8 color) noexcept
+constexpr i8 get_relative(i8 square, i8 color)
 {
     assert(square::is_valid(square));
     assert(color::is_valid(color));
 
     return square ^ (color * 56);
+};
+
+constexpr i32 get_distance_file(i8 square_1, i8 square_2)
+{
+    assert(square::is_valid(square_1));
+    assert(square::is_valid(square_2));
+
+    return std::abs(square::get_file(square_1) - square::get_file(square_2));
+};
+
+constexpr i32 get_distance_rank(i8 square_1, i8 square_2)
+{
+    assert(square::is_valid(square_1));
+    assert(square::is_valid(square_2));
+
+    return std::abs(square::get_rank(square_1) - square::get_rank(square_2));
+};
+
+constexpr i32 get_distance(i8 square_1, i8 square_2)
+{
+    return square::get_distance_file(square_1, square_2) + square::get_distance_rank(square_1, square_2);
+};
+
+constexpr std::string get_str(i8 square)
+{
+    std::string result;
+
+    result.push_back(file::get_char(square::get_file(square)));
+    result.push_back(rank::get_char(square::get_rank(square)));
+
+    return result;
 };
 
 };

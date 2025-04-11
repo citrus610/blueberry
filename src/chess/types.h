@@ -4,6 +4,7 @@
 #include <istream>
 #include <ostream>
 #include <fstream>
+#include <sstream>
 
 #include <functional>
 #include <utility>
@@ -13,11 +14,16 @@
 #include <bit>
 #include <bitset>
 #include <cassert>
+#include <chrono>
 
 #include <vector>
 #include <array>
 #include <cctype>
 #include <optional>
+
+#ifdef USE_PEXT
+#include <x86intrin.h>
+#endif
 
 using i8 = int8_t;
 using i16 = int16_t;
