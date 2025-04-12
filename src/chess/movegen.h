@@ -3,7 +3,7 @@
 #include "board.h"
 #include "mask.h"
 
-#include "../utils/arrayvec.h"
+#include "../util/arrayvec.h"
 
 namespace move::generate::type
 {
@@ -430,7 +430,7 @@ inline arrayvec<u16, MAX_MOVE> get_legal(Board& board)
     const u64 them = board.get_colors(!COLOR);
     const u64 occupied = us | them;
 
-    const u64 enemy_empty = ~us;
+    const u64 us_empty = ~us;
 
     const i8 king_square = board.get_king_square(COLOR);
 
@@ -444,7 +444,7 @@ inline arrayvec<u16, MAX_MOVE> get_legal(Board& board)
     u64 movable;
 
     if (TYPE == move::generate::type::ALL) {
-        movable = enemy_empty;
+        movable = us_empty;
     }
     else if (TYPE == move::generate::type::NOISY) {
         movable = them;
@@ -454,7 +454,7 @@ inline arrayvec<u16, MAX_MOVE> get_legal(Board& board)
     }
 
     // King
-    const u64 seen_mask = generate::get_seen_mask<!COLOR>(board, enemy_empty);
+    const u64 seen_mask = generate::get_seen_mask<!COLOR>(board, us_empty);
 
     generate::while_mask_add(
         list,
