@@ -4,7 +4,13 @@ int main()
 {
     init();
 
-    auto board = Board();
+    printf("fen?\n");
+    
+    std::string fen;
+
+    std::getline(std::cin, fen);
+    
+    auto board = Board(fen);
 
     printf("depth?\n");
 
