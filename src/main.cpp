@@ -33,8 +33,8 @@ int main()
 
         // Reads input
         if (tokens[0] == "uci") {
-            std::cout << "id name " << NAME << "\n";
-            std::cout << "id author " << AUTHOR << "\n";
+            std::cout << "id name " << NAME << std::endl;
+            std::cout << "id author " << AUTHOR << std::endl;
             std::cout << "uciok" << std::endl;
 
             continue;

@@ -82,12 +82,15 @@ bool Engine::search(Board board, Info uci_info)
         Data data;
         data.clear();
 
+        data.board = board;
+
         // Storing best pv lines found in each iteration
         std::vector<PV> pv_history = {};
 
         // Iterative deepening
-        for (i32 i = 1; i < 9; ++i) {
+        for (i32 i = 1; i < info.depth; ++i) {
             // Resets nodes count
+            auto nodes_previous = data.nodes;
             data.nodes = 0;
 
             // Does negamax with alpha beta
@@ -107,7 +110,6 @@ bool Engine::search(Board board, Info uci_info)
 
             // Checks time
             auto time_now = std::chrono::high_resolution_clock::now();
-            time_start = time_now;
 
             u64 time_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(time_now - time_start).count();
 

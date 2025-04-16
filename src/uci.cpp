@@ -25,6 +25,12 @@ std::optional<u16> get_move(const std::string& token, Board& board)
         i8 move_from = move::get_square_from(move);
         i8 move_to = move::get_square_to(move);
 
+        if (move::get_type(move) == move::type::CASTLING) {
+            bool castle_short = castling::create(move_to) & castling::SHORT;
+
+            move_to = castling::get_king_square(board.get_color(), castle_short);
+        }
+
         if (from != move_from || to != move_to) {
             continue;
         }
@@ -67,15 +73,9 @@ std::optional<Board> get_command_position(std::string in)
         board = Board();
     }
     else if (in.find("fen") != std::string::npos) {
-        printf("fen received: ");
-
         auto fen = in.substr(in.find("fen") + 4);
 
-        printf("%s\n", fen.c_str());
-
         board = Board(in.substr(in.find("fen") + 4, std::string::npos));
-
-        printf("board set!\n");
     }
 
     if (in.find("moves") != std::string::npos) {
@@ -125,7 +125,6 @@ std::optional<search::Info> get_command_go(std::string in)
     for (usize i = 1; i < tokens.size(); ++i) {
         if (tokens[i] == "infinite") {
             info.infinite = true;
-            printf("search infinite\n");
         }
 
         if (tokens[i] == "winc") {
@@ -176,12 +175,12 @@ void print_info(i32 depth, i32 score, u64 nodes, search::PV pv)
         std::cout << move::get_str(pv.data[i]) << " ";
     }
     
-    std::cout << "\n";
+    std::cout << std::endl;
 };
 
 void print_bestmove(u16 move)
 {
-    std::cout << "bestmove " << move::get_str(move) << "\n";
+    std::cout << "bestmove " << move::get_str(move) << std::endl;
 };
 
 };
