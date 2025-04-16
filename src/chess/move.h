@@ -59,4 +59,20 @@ constexpr i8 get_promotion_type(u16 move)
     return i8((move >> 12) & 3) + piece::type::KNIGHT;
 };
 
+constexpr std::string get_str(u16 move)
+{
+    auto from_str = square::get_str(move::get_square_from(move));
+    auto to_str = square::get_str(move::get_square_to(move));
+
+    auto str = from_str + to_str;
+
+    if (move::get_type(move) == move::type::PROMOTION) {
+        i32 promotion_type = move::get_promotion_type(move);
+
+        str.push_back(piece::type::get_char(promotion_type));
+    }
+
+    return str;
+};
+
 };

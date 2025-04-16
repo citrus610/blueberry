@@ -3,6 +3,8 @@
 #include "attack.h"
 #include "zobrist.h"
 
+#include "../util/arrayvec.h"
+
 struct Undo
 {
     u64 hash;
@@ -16,6 +18,7 @@ class Board
 {
 public:
     static constexpr auto STARTPOS = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    static constexpr auto MAX_PLY = 256;
 private:
     u64 pieces[6];
     u64 colors[2];
@@ -24,13 +27,15 @@ private:
     i8 castling;
     i8 enpassant;
     i32 halfmove;
-    i32 fullmove;
+    i32 ply;
+private:
     u64 hash;
-    std::vector<Undo> history;
+    arrayvec<Undo, MAX_PLY> history;
 public:
     Board(const std::string& fen = STARTPOS);
 public:
     void set_fen(const std::string& fen);
+    void set_ply(i32 ply);
 public:
     u64 get_occupied();
     u64 get_pieces(i8 piece_type);
@@ -45,6 +50,7 @@ public:
     i8 get_enpassant_square();
     i32 get_halfmove_count();
     i32 get_fullmove_count();
+    i32 get_ply();
     u64 get_square_attacker(i8 square);
     u64 get_hash();
     std::string get_fen();
@@ -61,4 +67,5 @@ public:
     void unmake_null();
     void remove(i8 piece_type, i8 color, i8 square);
     void place(i8 piece_type, i8 color, i8 square);
+    void print();
 };

@@ -55,6 +55,7 @@ void init()
     zobrist::COLOR = zobrist::get_rand64();
 };
 
+// Copied from Ethereal
 u64 get_rand64()
 {
     static u64 seed = 1070372Ull;

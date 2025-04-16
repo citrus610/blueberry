@@ -20,6 +20,8 @@ enum : i8
 namespace move::generate
 {
 
+// Gets the check mask for a color
+// Gets the mask for all the enemy's attackers and their lines of attack
 template<i8 COLOR>
 inline std::pair<u64, i32> get_check_mask(Board &board, i8 square)
 {
@@ -75,6 +77,7 @@ inline std::pair<u64, i32> get_check_mask(Board &board, i8 square)
     return { mask, checker };
 };
 
+// Gets the ray masks of the enemy rooks that pin our pieces
 template<i8 COLOR>
 inline u64 get_pin_mask_rook(Board &board, i8 square)
 {
@@ -102,6 +105,7 @@ inline u64 get_pin_mask_rook(Board &board, i8 square)
     return mask;
 };
 
+// Gets the ray masks of the enemy bishops that pin our pieces
 template<i8 COLOR>
 inline u64 get_pin_mask_bishop(Board &board, i8 square)
 {
@@ -129,6 +133,7 @@ inline u64 get_pin_mask_bishop(Board &board, i8 square)
     return mask;
 };
 
+// Gets the mask of all seen squares
 template<i8 COLOR>
 inline u64 get_seen_mask(Board &board, u64 enemy_empty)
 {
@@ -182,6 +187,7 @@ inline u64 get_seen_mask(Board &board, u64 enemy_empty)
     return mask;
 };
 
+// Gets the mask of all the castle-possible rooks
 template<i8 TYPE, i8 COLOR>
 inline u64 get_castle_rook_mask(Board& board, u64 seen_mask, u64 pin_mask_rook)
 {
@@ -234,6 +240,7 @@ inline u64 get_castle_rook_mask(Board& board, u64 seen_mask, u64 pin_mask_rook)
     return rook_mask;
 };
 
+// Adds pawn moves to the move list
 template<i8 TYPE, i8 COLOR>
 inline void push_pawn(arrayvec<u16, MAX_MOVE>& list, Board& board, u64 check_mask, u64 pin_mask_rook, u64 pin_mask_bishop)
 {
@@ -385,7 +392,7 @@ inline void push_pawn(arrayvec<u16, MAX_MOVE>& list, Board& board, u64 check_mas
 
         pawn_enpassant_possible = bitboard::get_pop_lsb(pawn_enpassant_possible);
 
-        // If our pawn is pinned and doing this enpassant move will danger our king then it is illegal
+        // If doing this enpassant move will danger our king then it is illegal
         u64 occupied_enpassed = occupied ^ bitboard::create(from) ^ bitboard::create(to) ^ bitboard::create(enpassant_pawn_square);
 
         if (attack::get_bishop(king_square, occupied_enpassed) & enemy_bishop) {
@@ -401,15 +408,16 @@ inline void push_pawn(arrayvec<u16, MAX_MOVE>& list, Board& board, u64 check_mas
     }
 };
 
+// Helper function
 template<typename T>
-inline void while_mask_add(arrayvec<u16, MAX_MOVE>& list, u64 mask, T func)
+inline void while_mask_add(arrayvec<u16, MAX_MOVE>& list, u64 mask, T callback)
 {
     while (mask)
     {
         const i8 from = bitboard::get_lsb(mask);
         mask = bitboard::get_pop_lsb(mask);
 
-        u64 moves = func(from);
+        u64 moves = callback(from);
 
         while (moves)
         {
@@ -421,6 +429,7 @@ inline void while_mask_add(arrayvec<u16, MAX_MOVE>& list, u64 mask, T func)
     }
 }
 
+// Gets all legal moves
 template<i8 TYPE, i8 COLOR>
 inline arrayvec<u16, MAX_MOVE> get_legal(Board& board)
 {
@@ -533,6 +542,7 @@ inline arrayvec<u16, MAX_MOVE> get_legal(Board& board)
     return list;
 };
 
+// Gets all legal moves for the side to move of this board
 template<i8 TYPE>
 inline arrayvec<u16, MAX_MOVE> get_legal(Board& board)
 {
@@ -541,7 +551,7 @@ inline arrayvec<u16, MAX_MOVE> get_legal(Board& board)
     }
 
     return generate::get_legal<TYPE, color::BLACK>(board);
-}
+};
 
 };
 

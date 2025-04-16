@@ -2,7 +2,6 @@
 
 Board::Board(const std::string& fen)
 {
-    this->history.reserve(256);
     this->set_fen(fen);
 };
 
@@ -25,7 +24,7 @@ void Board::set_fen(const std::string& fen)
     this->castling = castling::NONE;
     this->enpassant = square::NONE;
     this->halfmove = 0;
-    this->fullmove = 1;
+    this->ply = 0;
     this->hash = 0;
 
     // Reads fen
@@ -109,7 +108,12 @@ void Board::set_fen(const std::string& fen)
 
     // Sets move count
     this->halfmove = std::stoi(str_halfmove);
-    this->fullmove = std::stoi(str_fullmove);
+    this->ply = std::stoi(str_fullmove) * 2 - 2 + this->color;
+};
+
+void Board::set_ply(i32 ply)
+{
+    this->ply = ply;
 };
 
 u64 Board::get_occupied()
@@ -190,7 +194,12 @@ i32 Board::get_halfmove_count()
 
 i32 Board::get_fullmove_count()
 {
-    return this->fullmove;
+    return this->ply / 2 + 1;
+};
+
+i32 Board::get_ply()
+{
+    return this->ply;
 };
 
 u64 Board::get_square_attacker(i8 square)
@@ -270,7 +279,7 @@ std::string Board::get_fen()
     fen += " ";
     fen += std::to_string(this->halfmove);
     fen += " ";
-    fen += std::to_string(this->fullmove);
+    fen += std::to_string(this->get_fullmove_count());
 
     return fen;
 };
@@ -282,10 +291,6 @@ bool Board::is_drawn_repitition()
 
     for (i32 i = size - 2; i >= 0 && i >= size - this->halfmove - 1; i -= 2) {
         if (this->history[i].hash == this->hash) {
-            count += 1;
-        }
-
-        if (count == 2) {
             return true;
         }
     }
@@ -314,26 +319,72 @@ bool Board::is_square_attacked(i8 square, i8 color)
     assert(square::is_valid(square));
     assert(color::is_valid(color));
 
-    u64 enemy = this->colors[!color];
-    u64 occupied = this->get_occupied();
+    const u64 enemy = this->colors[!color];
+    const u64 occupied = this->get_occupied();
 
-    u64 enemy_pawns = enemy & this->pieces[piece::type::PAWN];
-    u64 enemy_knights = enemy & this->pieces[piece::type::KNIGHT];
-    u64 enemy_bishops = enemy & (this->pieces[piece::type::BISHOP] | this->pieces[piece::type::QUEEN]);
-    u64 enemy_rooks = enemy & (this->pieces[piece::type::ROOK] | this->pieces[piece::type::QUEEN]);
-    u64 enemy_kings = enemy & this->pieces[piece::type::KING];
+    const u64 enemy_pawns = enemy & this->pieces[piece::type::PAWN];
 
-    return
-        (attack::get_pawn(square, color) & enemy_pawns) ||
-        (attack::get_knight(square) & enemy_knights) ||
-        (enemy_bishops && (attack::get_bishop(square, occupied) & enemy_bishops)) ||
-        (enemy_rooks && (attack::get_rook(square, occupied) & enemy_rooks)) ||
-        (attack::get_king(square) & enemy_kings);
+    if (attack::get_pawn(square, color) & enemy_pawns) {
+        return true;
+    }
+
+    const u64 enemy_knights = enemy & this->pieces[piece::type::KNIGHT];
+
+    if (attack::get_knight(square) & enemy_knights) {
+        return true;
+    }
+
+    const u64 enemy_bishops = enemy & (this->pieces[piece::type::BISHOP] | this->pieces[piece::type::QUEEN]);
+
+    if (attack::get_bishop(square, occupied) & enemy_bishops) {
+        return true;
+    }
+
+    const u64 enemy_rooks = enemy & (this->pieces[piece::type::ROOK] | this->pieces[piece::type::QUEEN]);
+
+    if (attack::get_rook(square, occupied) & enemy_rooks) {
+        return true;
+    }
+
+    const u64 enemy_kings = enemy & this->pieces[piece::type::KING];
+
+    return attack::get_king(square) & enemy_kings;
 };
 
 bool Board::is_in_check(i8 color)
 {
-    return this->is_square_attacked(this->get_king_square(color), color);
+    assert(color::is_valid(color));
+
+    const i8 square = this->get_king_square(color);
+
+    const u64 enemy = this->colors[!color];
+    const u64 occupied = this->get_occupied();
+
+    const u64 enemy_pawns = enemy & this->pieces[piece::type::PAWN];
+
+    if (attack::get_pawn(square, color) & enemy_pawns) {
+        return true;
+    }
+
+    const u64 enemy_knights = enemy & this->pieces[piece::type::KNIGHT];
+
+    if (attack::get_knight(square) & enemy_knights) {
+        return true;
+    }
+
+    const u64 enemy_bishops = enemy & (this->pieces[piece::type::BISHOP] | this->pieces[piece::type::QUEEN]);
+
+    if (attack::get_bishop(square, occupied) & enemy_bishops) {
+        return true;
+    }
+
+    const u64 enemy_rooks = enemy & (this->pieces[piece::type::ROOK] | this->pieces[piece::type::QUEEN]);
+
+    if (attack::get_rook(square, occupied) & enemy_rooks) {
+        return true;
+    }
+
+    return false;
 };
 
 void Board::make(u16 move)
@@ -355,7 +406,7 @@ void Board::make(u16 move)
     assert(this->get_color_at(move_to) != this->color || move_type == move::type::CASTLING);
 
     // Saves info
-    this->history.push_back(Undo {
+    this->history.add(Undo {
         .hash = this->hash,
         .castling = this->castling,
         .enpassant = this->enpassant,
@@ -365,7 +416,7 @@ void Board::make(u16 move)
 
     // Updates move counter
     this->halfmove += 1;
-    this->fullmove += 1;
+    this->ply += 1;
 
     // Removes enpassant square
     if (this->enpassant != square::NONE) {
@@ -497,7 +548,7 @@ void Board::unmake(u16 move)
 {
     // Reverts history
     auto undo = this->history.back();
-    this->history.pop_back();
+    this->history.pop();
 
     this->hash = undo.hash;
     this->castling = undo.castling;
@@ -505,7 +556,7 @@ void Board::unmake(u16 move)
     this->halfmove = undo.halfmove;
 
     this->color = !this->color;
-    this->fullmove -= 1;
+    this->ply -= 1;
 
     // Gets move data
     i8 move_from = move::get_square_from(move);
@@ -567,12 +618,42 @@ void Board::unmake(u16 move)
 
 void Board::make_null()
 {
+    // Saves info
+    this->history.add(Undo {
+        .hash = this->hash,
+        .castling = this->castling,
+        .enpassant = this->enpassant,
+        .captured = piece::type::NONE,
+        .halfmove = this->halfmove
+    });
 
+    // Updates color
+    this->color = !this->color;
+    this->hash ^= zobrist::get_color();
+
+    // Updates enpassant square
+    if (this->enpassant != square::NONE) {
+        this->hash ^= zobrist::get_enpassant(square::get_file(this->enpassant));
+        this->enpassant = square::NONE;
+    }
+
+    // Updates move counter
+    this->ply += 1;
 };
 
 void Board::unmake_null()
 {
+    // Reverts history
+    auto undo = this->history.back();
+    this->history.pop();
 
+    this->hash = undo.hash;
+    this->castling = undo.castling;
+    this->enpassant = undo.enpassant;
+    this->halfmove = undo.halfmove;
+
+    this->color = !this->color;
+    this->ply -= 1;
 };
 
 void Board::remove(i8 piece_type, i8 color, i8 square)
@@ -598,8 +679,30 @@ void Board::place(i8 piece_type, i8 color, i8 square)
 
     assert(this->get_piece_type_at(square) == piece::type::NONE);
     assert(this->get_color_at(square) == color::NONE);
+    assert(this->get_piece_at(square) == piece::NONE);
 
     this->pieces[piece_type] |= 1ULL << square;
     this->colors[color] |= 1ULL << square;
     this->board[square] = piece::create(piece_type, color);
+};
+
+void Board::print()
+{
+    for (i32 rank = 7; rank >= 0; --rank) {
+        char line[] = ". . . . . . . .";
+
+        for (i32 file = 0; file < 8; ++file) {
+            i8 square = square::create(file, rank);
+
+            if (this->board[square] == piece::NONE) {
+                continue;
+            }
+
+            line[2 * file] = piece::get_char(this->board[square]);
+        }
+
+        printf("%s\n", line);
+    }
+
+    printf("\n");
 };
