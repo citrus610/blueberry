@@ -9,12 +9,6 @@ arrayvec<i32, move::MAX_MOVE> get_score(const arrayvec<u16, move::MAX_MOVE>& mov
     auto scores = arrayvec<i32, move::MAX_MOVE>();
 
     for (usize i = 0; i < moves.size(); ++i) {
-        // PV
-        if (moves[i] == data.pv_table[data.ply].data[0]) {
-            scores.add(move::order::PV_SCORE);
-            continue;
-        }
-
         // MVV LVA
         i8 piece = data.board.get_piece_at(move::get_square_from(moves[i]));
         i8 captured = data.board.get_piece_type_at(move::get_square_to(moves[i]));

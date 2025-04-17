@@ -291,6 +291,10 @@ bool Board::is_drawn_repitition()
 
     for (i32 i = size - 2; i >= 0 && i >= size - this->halfmove - 1; i -= 2) {
         if (this->history[i].hash == this->hash) {
+            count += 1;
+        }
+
+        if (count == 2) {
             return true;
         }
     }

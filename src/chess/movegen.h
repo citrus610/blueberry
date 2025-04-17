@@ -287,13 +287,12 @@ inline void push_pawn(arrayvec<u16, MAX_MOVE>& list, Board& board, u64 check_mas
     u64 push_2 = ((bitboard::get_shift<UP>(push_1_unpinned & MASK_DOUBLE_PUSH) & ~occupied) | (bitboard::get_shift<UP>(push_1_pinned & MASK_DOUBLE_PUSH) & ~occupied)) & check_mask;
 
     // Pushes promotion
-    if (pawn & MASK_PRE_PROMOTION) {
+    if ((TYPE != move::generate::type::QUIET) && (pawn & MASK_PRE_PROMOTION)) {
         u64 promo_left = pawn_l & MASK_PROMOTION;
         u64 promo_right = pawn_r & MASK_PROMOTION;
         u64 promo_push = push_1 & MASK_PROMOTION;
 
-        // Skips capturing promotions if we are only generating quiet moves
-        while (TYPE != move::generate::type::QUIET && promo_left)
+        while (promo_left)
         {
             const i8 square = bitboard::get_lsb(promo_left);
             promo_left = bitboard::get_pop_lsb(promo_left);
@@ -304,7 +303,7 @@ inline void push_pawn(arrayvec<u16, MAX_MOVE>& list, Board& board, u64 check_mas
             list.add(move::get_make<move::type::PROMOTION>(square + DOWN_RIGHT, square, piece::type::KNIGHT));
         }
 
-        while (TYPE != move::generate::type::QUIET && promo_right)
+        while (promo_right)
         {
             const i8 square = bitboard::get_lsb(promo_right);
             promo_right = bitboard::get_pop_lsb(promo_right);
@@ -315,8 +314,7 @@ inline void push_pawn(arrayvec<u16, MAX_MOVE>& list, Board& board, u64 check_mas
             list.add(move::get_make<move::type::PROMOTION>(square + DOWN_LEFT, square, piece::type::KNIGHT));
         }
 
-        // Skips quiet promotions if we are only generating captures
-        while (TYPE != move::generate::type::NOISY && promo_push)
+        while (promo_push)
         {
             const i8 square = bitboard::get_lsb(promo_push);
             promo_push = bitboard::get_pop_lsb(promo_push);

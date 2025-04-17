@@ -63,7 +63,7 @@ void Engine::clear()
     this->thread = nullptr;
 };
 
-bool Engine::search(Board board, Info uci_info)
+bool Engine::search(Board uci_board, Info uci_info)
 {
     if (this->running.test() || this->thread != nullptr) {
         return false;
@@ -74,24 +74,20 @@ bool Engine::search(Board board, Info uci_info)
     // Starts search thread
     this->running.test_and_set();
 
-    this->thread = new std::thread([&] (Info info) {
+    this->thread = new std::thread([&] (Board board, Info info) {
         // Gets start time
         auto time_start = std::chrono::high_resolution_clock::now();
-
-        // Inits search data
-        Data data;
-        data.clear();
-
-        data.board = board;
 
         // Storing best pv lines found in each iteration
         std::vector<PV> pv_history = {};
 
         // Iterative deepening
         for (i32 i = 1; i < info.depth; ++i) {
-            // Resets nodes count
-            auto nodes_previous = data.nodes;
-            data.nodes = 0;
+            // Inits search data
+            Data data;
+            data.clear();
+
+            data.board = board;
 
             // Does negamax with alpha beta
             i32 score = search::negamax(data, -eval::score::INFINITE, eval::score::INFINITE, i, running);
@@ -113,6 +109,11 @@ bool Engine::search(Board board, Info uci_info)
 
             u64 time_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(time_now - time_start).count();
 
+            if (i >= 7) {
+                this->running.clear();
+                break;
+            }
+
             if (!info.infinite && time_elapsed >= timer::get_available(info.time[board.get_color()], info.inc[board.get_color()], info.movestogo)) {
                 this->running.clear();
                 break;
@@ -121,7 +122,7 @@ bool Engine::search(Board board, Info uci_info)
 
         // Prints best move
         uci::print_bestmove(pv_history.back().data[0]);
-    }, uci_info);
+    }, uci_board, uci_info);
 
     return true;
 };
@@ -157,29 +158,26 @@ bool Engine::join()
 
 i32 negamax(Data& data, i32 alpha, i32 beta, i32 depth, std::atomic_flag& running)
 {
-    // Checks if we are in check
-    const bool is_in_check = data.board.is_in_check(data.board.get_color());
-
     // Quiensence search
-    if (depth <= 0 && !is_in_check) {
+    if (depth <= 0) {
         return search::qsearch(data, alpha, beta, running);
     }
-
-    // Makes sure that depth is positive
-    depth = std::max(depth, 0);
 
     // Updates nodes count
     data.nodes += 1;
 
     // Checks drawn
     if (data.board.is_drawn_repitition() || data.board.is_drawn_fifty_move() || data.board.is_drawn_insufficient()) {
-        return i32(data.nodes & 2) - 1;
+        return i32(data.nodes & 0b10) - 1;
     }
 
     // Aborts search
     if (!running.test()) {
-        return alpha;
+        return -eval::score::INFINITE;
     }
+
+    // Best score
+    i32 best = -eval::score::INFINITE;
 
     // Generate moves
     auto moves = move::generate::get_legal<move::generate::type::ALL>(data.board);
@@ -203,29 +201,34 @@ i32 negamax(Data& data, i32 alpha, i32 beta, i32 depth, std::atomic_flag& runnin
 
         bool is_quiet = data.board.get_piece_at(move::get_square_to(moves[i])) == piece::NONE || move::get_type(moves[i]) == move::type::CASTLING;
 
-        // Fail-hard beta-cutoff
+        // Updates values
+        if (score > best) {
+            best = score;
+
+            if (score > alpha) {
+                alpha = score;
+    
+                // Stores history moves
+                if (is_quiet) {
+                    i8 piece = data.board.get_piece_at(move::get_square_from(moves[i]));
+                    i8 to = move::get_square_to(moves[i]);
+    
+                    data.history_table[piece][to] += depth;
+                }
+    
+                // Updates pv line
+                data.pv_table[data.ply].update(moves[i], data.pv_table[data.ply + 1]);
+            }
+        }
+
+        // Fail-soft cutoff
         if (score >= beta) {
             // Stores killer moves
             if (is_quiet) {
                 data.killer_table[data.ply] = moves[i];
             }
 
-            return beta;
-        }
-
-        if (score > alpha) {
-            alpha = score;
-
-            // Stores history moves
-            if (is_quiet) {
-                i8 piece = data.board.get_piece_at(move::get_square_from(moves[i]));
-                i8 to = move::get_square_to(moves[i]);
-
-                data.history_table[piece][to] += depth;
-            }
-
-            // Updates pv line
-            data.pv_table[data.ply].update(moves[i], data.pv_table[data.ply + 1]);
+            return best;
         }
     }
 
@@ -239,18 +242,13 @@ i32 negamax(Data& data, i32 alpha, i32 beta, i32 depth, std::atomic_flag& runnin
         }
     }
 
-    return alpha;
+    return best;
 };
 
 i32 qsearch(Data& data, i32 alpha, i32 beta, std::atomic_flag& running)
 {
     // Updates nodes count
     data.nodes += 1;
-
-    // Checks drawn
-    if (data.board.is_drawn_repitition() || data.board.is_drawn_fifty_move() || data.board.is_drawn_insufficient()) {
-        return i32(data.nodes & 2) - 1;
-    }
 
     // Aborts search
     if (!running.test()) {
@@ -259,6 +257,7 @@ i32 qsearch(Data& data, i32 alpha, i32 beta, std::atomic_flag& running)
 
     // Gets static eval
     i32 standpat = eval::get(data.board);
+    i32 best = standpat;
 
     if (data.ply >= Board::MAX_PLY) {
         return standpat;
@@ -293,9 +292,8 @@ i32 qsearch(Data& data, i32 alpha, i32 beta, std::atomic_flag& running)
         data.board.unmake(moves[i]);
         data.ply -= 1;
 
-        // Cut off
-        if (score >= beta) {
-            return score;
+        if (score > best) {
+            best = score;
         }
 
         if (score > alpha) {
@@ -304,9 +302,19 @@ i32 qsearch(Data& data, i32 alpha, i32 beta, std::atomic_flag& running)
             // Updates pv line
             data.pv_table[data.ply].update(moves[i], data.pv_table[data.ply + 1]);
         }
+
+        // Cut off
+        if (score >= beta) {
+            break;
+        }
     }
 
-    return alpha;
+    // Mates
+    if (moves.size() == 0 && data.board.is_in_check(data.board.get_color())) {
+        return -eval::score::MATE + data.board.get_ply();
+    }
+
+    return best;
 };
 
 };

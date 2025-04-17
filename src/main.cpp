@@ -4,6 +4,28 @@ int main()
 {
     init();
 
+    // {
+    //     auto board = Board("r6k/p2r2pp/2bp1p2/4p3/8/PP4N1/R1P2PPP/4R2K b - - 9 38");
+
+    //     auto ms = move::generate::get_legal<move::generate::type::NOISY>(board);
+
+    //     for (usize i = 0; i < ms.size(); ++i) {
+    //         std::cout << move::get_str(ms[i]) << std::endl;
+    //     }
+
+    //     auto data = search::Data();
+    //     data.board = board;
+
+    //     std::atomic_flag f;
+    //     f.test_and_set();
+
+    //     auto score = search::negamax(data, -eval::score::INFINITE, eval::score::INFINITE, 7, f);
+
+    //     uci::print_info(7, score, data.nodes, data.pv_table[0]);
+    // }
+
+    // return 0;
+
     auto board = Board();
     auto info = search::Info();
     auto engine = search::Engine();

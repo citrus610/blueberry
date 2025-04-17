@@ -24,14 +24,15 @@ std::optional<u16> get_move(const std::string& token, Board& board)
     for (auto move : moves) {
         i8 move_from = move::get_square_from(move);
         i8 move_to = move::get_square_to(move);
+        i8 move_to_castle = move_to;
 
         if (move::get_type(move) == move::type::CASTLING) {
             bool castle_short = castling::create(move_to) & castling::SHORT;
 
-            move_to = castling::get_king_square(board.get_color(), castle_short);
+            move_to_castle = castling::get_king_square(board.get_color(), castle_short);
         }
 
-        if (from != move_from || to != move_to) {
+        if (from != move_from || (to != move_to && to != move_to_castle)) {
             continue;
         }
 

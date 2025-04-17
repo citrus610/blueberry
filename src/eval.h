@@ -6,10 +6,8 @@ namespace eval::score
 {
 
 constexpr i32 DRAW = 0;
-constexpr i32 KNOWN_WIN = 10000;
-constexpr i32 MATE = 32000;
-constexpr i32 INFINITE = INT32_MAX;
-constexpr i32 NONE = 32002;
+constexpr i32 MATE = INT16_MAX - 1;
+constexpr i32 INFINITE = INT16_MAX;
 
 constexpr i32 create(i32 midgame, i32 endgame)
 {
