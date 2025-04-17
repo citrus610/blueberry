@@ -116,7 +116,7 @@ bool Engine::search(Board uci_board, Info uci_info)
             // For now we only do max depth 7
             // Because depth >= 8 search are super slow without transposition table
             // TODO: will remove this later
-            if (i >= 7) {
+            if (i >= 7 && data.nodes >= 1000000) {
                 this->running.clear();
                 break;
             }
@@ -163,6 +163,7 @@ bool Engine::join()
     return true;
 };
 
+// Alpha-beta
 i32 negamax(Data& data, i32 alpha, i32 beta, i32 depth, std::atomic_flag& running)
 {
     // Quiensence search
@@ -186,7 +187,7 @@ i32 negamax(Data& data, i32 alpha, i32 beta, i32 depth, std::atomic_flag& runnin
     // Best score
     i32 best = -eval::score::INFINITE;
 
-    // Generate moves
+    // Generate moves and scores them
     auto moves = move::generate::get_legal<move::generate::type::ALL>(data.board);
     auto moves_scores = move::order::get_score(moves, data);
 
@@ -242,7 +243,7 @@ i32 negamax(Data& data, i32 alpha, i32 beta, i32 depth, std::atomic_flag& runnin
     // Checks stalemate or checkmate
     if (moves.size() == 0) {
         if (data.board.is_in_check(data.board.get_color())) {
-            return -eval::score::MATE + data.board.get_ply();
+            return -eval::score::MATE + data.ply;
         }
         else {
             return eval::score::DRAW;
@@ -252,6 +253,7 @@ i32 negamax(Data& data, i32 alpha, i32 beta, i32 depth, std::atomic_flag& runnin
     return best;
 };
 
+// Quiescence search
 i32 qsearch(Data& data, i32 alpha, i32 beta, std::atomic_flag& running)
 {
     // Updates nodes count
@@ -262,25 +264,46 @@ i32 qsearch(Data& data, i32 alpha, i32 beta, std::atomic_flag& running)
         return alpha;
     }
 
+    // Checks if we're in check
+    bool is_in_check = data.board.is_in_check(data.board.get_color());
+
     // Gets static eval
     i32 standpat = eval::get(data.board);
-    i32 best = standpat;
-
+    
+    // Max ply reached
     if (data.ply >= Board::MAX_PLY) {
-        return standpat;
+        return is_in_check ? 0 : standpat;
     }
 
-    // Prunes
-    if (standpat >= beta) {
-        return standpat;
+    // Updates best eval based on if we're in check
+    i32 best;
+
+    if (is_in_check) {
+        // Possible mate here
+        best = -eval::score::INFINITE;
+    }
+    else {
+        best = standpat;
+    
+        // Prunes
+        if (standpat >= beta) {
+            return standpat;
+        }
+    
+        // Updates alpha
+        if (alpha < standpat) {
+            alpha = standpat;
+        }
     }
 
-    if (alpha < standpat) {
-        alpha = standpat;
-    }
-
-    // Gets capture moves
-    auto moves = move::generate::get_legal<move::generate::type::NOISY>(data.board);
+    // Generates noisy moves
+    // If we're in check, generates all legal moves
+    auto moves = 
+        is_in_check ?
+        move::generate::get_legal<move::generate::type::ALL>(data.board) :
+        move::generate::get_legal<move::generate::type::NOISY>(data.board);
+    
+    // Scores moves
     auto moves_scores = move::order::get_score(moves, data);
 
     // Makes moves
@@ -299,15 +322,16 @@ i32 qsearch(Data& data, i32 alpha, i32 beta, std::atomic_flag& running)
         data.board.unmake(moves[i]);
         data.ply -= 1;
 
+        // Updates values
         if (score > best) {
             best = score;
-        }
 
-        if (score > alpha) {
-            alpha = score;
-
-            // Updates pv line
-            data.pv_table[data.ply].update(moves[i], data.pv_table[data.ply + 1]);
+            if (score > alpha) {
+                alpha = score;
+    
+                // Updates pv line
+                data.pv_table[data.ply].update(moves[i], data.pv_table[data.ply + 1]);
+            }
         }
 
         // Cut off
@@ -316,9 +340,9 @@ i32 qsearch(Data& data, i32 alpha, i32 beta, std::atomic_flag& running)
         }
     }
 
-    // Mates
-    if (moves.size() == 0 && data.board.is_in_check(data.board.get_color())) {
-        return -eval::score::MATE + data.board.get_ply();
+    // Special case if we are in check
+    if (is_in_check && moves.size() == 0) {
+        return -eval::score::MATE + data.ply;
     }
 
     return best;
