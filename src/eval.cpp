@@ -12,8 +12,8 @@ i32 get(Board& board)
     score += eval::get_table(board);
     score += eval::get_mobility(board);
 
-    // Returns score based on side to move
-    return board.get_color() == color::WHITE ? score : -score;;
+    // Returns score based on side to move with tempo
+    return (board.get_color() == color::WHITE ? score : -score) + eval::DEFAULT.tempo;
 };
 
 i32 get_material(Board& board)

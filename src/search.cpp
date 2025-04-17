@@ -75,8 +75,8 @@ bool Engine::search(Board uci_board, Info uci_info)
     this->running.test_and_set();
 
     this->thread = new std::thread([&] (Board board, Info info) {
-        // Gets start time
-        auto time_start = std::chrono::high_resolution_clock::now();
+        // Total search time
+        u64 time = 0;
 
         // Storing best pv lines found in each iteration
         std::vector<PV> pv_history = {};
@@ -90,7 +90,11 @@ bool Engine::search(Board uci_board, Info uci_info)
             data.board = board;
 
             // Does negamax with alpha beta
+            auto time_1 = std::chrono::high_resolution_clock::now();
+
             i32 score = search::negamax(data, -eval::score::INFINITE, eval::score::INFINITE, i, running);
+
+            auto time_2 = std::chrono::high_resolution_clock::now();
 
             // Stops when the uci client sends stop
             // We don't save the pv line when we stop the search abruptly
@@ -102,19 +106,22 @@ bool Engine::search(Board uci_board, Info uci_info)
             pv_history.push_back(data.pv_table[0]);
 
             // Prints infos
-            uci::print_info(i, score, data.nodes, pv_history.back());
+            u64 dt = std::chrono::duration_cast<std::chrono::milliseconds>(time_2 - time_1).count();
+
+            uci::print_info(i, score, data.nodes, dt, pv_history.back());
 
             // Checks time
-            auto time_now = std::chrono::high_resolution_clock::now();
+            time += dt;
 
-            u64 time_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(time_now - time_start).count();
-
+            // For now we only do max depth 7
+            // Because depth >= 8 search are super slow without transposition table
+            // TODO: will remove this later
             if (i >= 7) {
                 this->running.clear();
                 break;
             }
 
-            if (!info.infinite && time_elapsed >= timer::get_available(info.time[board.get_color()], info.inc[board.get_color()], info.movestogo)) {
+            if (!info.infinite && time >= timer::get_available(info.time[board.get_color()], info.inc[board.get_color()], info.movestogo)) {
                 this->running.clear();
                 break;
             }
