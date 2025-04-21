@@ -3,6 +3,7 @@
 Board::Board(const std::string& fen)
 {
     this->set_fen(fen);
+    this->history.reserve(512);
 };
 
 void Board::set_fen(const std::string& fen)
@@ -410,7 +411,7 @@ void Board::make(u16 move)
     assert(this->get_color_at(move_to) != this->color || move_type == move::type::CASTLING);
 
     // Saves info
-    this->history.add(Undo {
+    this->history.push_back(Undo {
         .hash = this->hash,
         .castling = this->castling,
         .enpassant = this->enpassant,
@@ -552,7 +553,7 @@ void Board::unmake(u16 move)
 {
     // Reverts history
     auto undo = this->history.back();
-    this->history.pop();
+    this->history.pop_back();
 
     this->hash = undo.hash;
     this->castling = undo.castling;
@@ -623,7 +624,7 @@ void Board::unmake(u16 move)
 void Board::make_null()
 {
     // Saves info
-    this->history.add(Undo {
+    this->history.push_back(Undo {
         .hash = this->hash,
         .castling = this->castling,
         .enpassant = this->enpassant,
@@ -649,7 +650,7 @@ void Board::unmake_null()
 {
     // Reverts history
     auto undo = this->history.back();
-    this->history.pop();
+    this->history.pop_back();
 
     this->hash = undo.hash;
     this->castling = undo.castling;

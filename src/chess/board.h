@@ -5,6 +5,8 @@
 
 #include "../util/arrayvec.h"
 
+constexpr i32 MAX_PLY = 256;
+
 struct Undo
 {
     u64 hash;
@@ -18,7 +20,6 @@ class Board
 {
 public:
     static constexpr auto STARTPOS = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-    static constexpr auto MAX_PLY = 256;
 private:
     u64 pieces[6];
     u64 colors[2];
@@ -30,7 +31,7 @@ private:
     i32 ply;
 private:
     u64 hash;
-    arrayvec<Undo, MAX_PLY> history;
+    std::vector<Undo> history;
 public:
     Board(const std::string& fen = STARTPOS);
 public:

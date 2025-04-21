@@ -6,11 +6,12 @@
 #include "eval.h"
 #include "order.h"
 #include "timer.h"
+#include "transposition.h"
 
 namespace search
 {
 
-struct Info
+struct Settings
 {
     i32 depth;
     u64 time[2];
@@ -22,7 +23,7 @@ struct Info
 class PV
 {
 public:
-    u16 data[Board::MAX_PLY] = { move::NONE_MOVE };
+    u16 data[MAX_PLY] = { move::NONE_MOVE };
     i32 count = 0;
 public:
     PV();
@@ -34,14 +35,14 @@ public:
 class Data
 {
 public:
-    PV pv_table[Board::MAX_PLY];
-    u16 killer_table[Board::MAX_PLY];
+    u16 killer_table[MAX_PLY];
     i32 history_table[12][64];
 public:
     Board board;
     i32 ply;
 public:
     u64 nodes;
+    i32 seldepth;
 public:
     void clear();
 };
@@ -51,17 +52,22 @@ class Engine
 private:
     std::atomic_flag running;
     std::thread* thread;
+private:
+    u64 time_end_soft;
+    u64 time_end_hard;
+public:
+    transposition::Table table;
 public:
     Engine();
 public:
+    void init();
     void clear();
-    bool search(Board board, Info info);
+    bool search(Board board, Settings info);
     bool stop();
     bool join();
+public:
+    i32 negamax(Data& data, i32 alpha, i32 beta, i32 depth, PV& pv);
+    i32 qsearch(Data& data, i32 alpha, i32 beta, PV& pv);
 };
-
-i32 negamax(Data& data, i32 alpha, i32 beta, i32 depth, std::atomic_flag& running);
-
-i32 qsearch(Data& data, i32 alpha, i32 beta, std::atomic_flag& running);
 
 };
