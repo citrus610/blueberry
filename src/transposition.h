@@ -23,14 +23,13 @@ constexpr u8 EXACT = 3;
 namespace mask
 {
 
-constexpr u8 AGE = 0b11111000;
-constexpr u8 PV = 0b100;
+constexpr u8 AGE = 0b11111100;
 constexpr u8 BOUND = 0b11;
 
 };
 
 constexpr usize MAX_ENTRIES = 3;
-constexpr u8 MAX_AGE = 1 << 5;
+constexpr u8 MAX_AGE = 1 << 6;
 
 constexpr u64 KB = 1ULL << 10;
 constexpr u64 MB = 1ULL << 20;
@@ -43,7 +42,7 @@ private:
     i16 score = 0;
     i16 eval = 0;
     u8 depth = 0;
-    u8 flags = 0;
+    u8 flags = 0; // age : 6, bound : 2
 public:
     u16 get_hash();
     u16 get_move();
@@ -55,9 +54,7 @@ public:
     i32 get_age_distance(u8 table_age);
 public:
     void set_score(i32 score, i32 ply);
-    void set(u64 hash, u16 move, i32 score, i32 eval, i32 depth, bool pv, u8 bound, i32 ply, u8 table_age);
-public:
-    bool is_pv();
+    void set(u64 hash, u16 move, i32 score, i32 eval, i32 depth, u8 bound, i32 ply, u8 table_age);
 };
 
 struct alignas(32) Bucket
@@ -89,29 +86,5 @@ public:
 
 static_assert(sizeof(Entry) == 10);
 static_assert(sizeof(Bucket) == 32);
-
-inline i32 get_score_from(i32 score, i32 ply)
-{
-    if (score > eval::score::MATE_FOUND) {
-        score -= ply;
-    }
-    else if (score < -eval::score::MATE_FOUND) {
-        score += ply;
-    }
-
-    return score;
-};
-
-inline i32 get_score_to(i32 score, i32 ply)
-{
-    if (score > eval::score::MATE_FOUND) {
-        score += ply;
-    }
-    else if (score < -eval::score::MATE_FOUND) {
-        score -= ply;
-    }
-
-    return score;
-};
 
 };

@@ -43,7 +43,7 @@ i32 Entry::get_depth()
 
 u8 Entry::get_age()
 {
-    return this->flags >> 3;
+    return this->flags >> 2;
 };
 
 u8 Entry::get_bound()
@@ -71,7 +71,7 @@ void Entry::set_score(i32 score, i32 ply)
     this->score = score;
 };
 
-void Entry::set(u64 hash, u16 move, i32 score, i32 eval, i32 depth, bool pv, u8 bound, i32 ply, u8 table_age)
+void Entry::set(u64 hash, u16 move, i32 score, i32 eval, i32 depth, u8 bound, i32 ply, u8 table_age)
 {
     // Preserves any existing move for the same position
     if (move || this->hash != static_cast<u16>(hash)) {
@@ -82,18 +82,13 @@ void Entry::set(u64 hash, u16 move, i32 score, i32 eval, i32 depth, bool pv, u8 
     if (bound == bound::EXACT ||
         this->hash != static_cast<u16>(hash) ||
         this->get_age() != table_age ||
-        depth + 4 + static_cast<i32>(pv) * 2 > this->depth) {
+        depth + 4 > this->depth) {
         this->hash = static_cast<u16>(hash);
         this->depth = static_cast<u8>(depth);
         this->set_score(score, ply);
         this->eval = eval;
-        this->flags = bound | (static_cast<u8>(pv) << 2) | (table_age << 3);
+        this->flags = bound | (table_age << 2);
     }
-};
-
-bool Entry::is_pv()
-{
-    return this->flags & mask::PV;
 };
 
 Table::Table()
@@ -178,8 +173,8 @@ std::pair<bool, Entry*> Table::get(u64 hash)
     auto entry = &entries[0];
 
     for (usize i = 1; i < MAX_ENTRIES; ++i) {
-        if (entries[i].get_depth() - 8 * entries[i].get_age_distance(this->age) <
-            entry->get_depth() - 8 * entry->get_age_distance(this->age)) {
+        if (entries[i].get_depth() - 4 * entries[i].get_age_distance(this->age) <
+            entry->get_depth() - 4 * entry->get_age_distance(this->age)) {
             entry = &entries[i];
         }
     }

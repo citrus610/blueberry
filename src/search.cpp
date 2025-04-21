@@ -107,7 +107,7 @@ bool Engine::search(Board uci_board, Settings uci_setting)
             // Does negamax with alpha beta
             auto time_1 = std::chrono::high_resolution_clock::now();
 
-            i32 score = this->negamax(data, -eval::score::INFINITE, eval::score::INFINITE, i, pv);
+            i32 score = this->pvsearch<node::ROOT>(data, -eval::score::INFINITE, eval::score::INFINITE, i, pv);
 
             auto time_2 = std::chrono::high_resolution_clock::now();
 
@@ -167,9 +167,14 @@ bool Engine::join()
     return true;
 };
 
-// Alpha-beta
-i32 Engine::negamax(Data& data, i32 alpha, i32 beta, i32 depth, PV& pv)
+// Principle variation search
+template <node NODE>
+i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth, PV& pv)
 {
+    // Gets node type
+    constexpr bool is_pv = NODE == node::PV || NODE == node::ROOT;
+    constexpr bool is_root = NODE == node::ROOT;
+
     // Quiensence search
     if (depth <= 0) {
         return this->qsearch(data, alpha, beta, pv);
@@ -192,6 +197,7 @@ i32 Engine::negamax(Data& data, i32 alpha, i32 beta, i32 depth, PV& pv)
     data.nodes += 1;
     data.seldepth = std::max(data.seldepth, data.ply);
 
+    // Early stop condition
     // Checks drawn
     if (data.board.is_drawn_repitition() || data.board.is_drawn_fifty_move() || data.board.is_drawn_insufficient()) {
         return i32(data.nodes & 0b10) - 1;
@@ -217,9 +223,9 @@ i32 Engine::negamax(Data& data, i32 alpha, i32 beta, i32 depth, PV& pv)
         i32 table_score = table_entry->get_score(data.ply);
         i32 table_depth = table_entry->get_depth();
 
-        // Checks if the same position has already been searched to at least an equal depth
+        // Checks if the same position has already been searched to at least an equal depth in non PV nodes
         // Returns when score is exact or produces a cutoff
-        if (table_depth >= depth) {
+        if (table_depth >= depth && !is_pv) {
             if ((table_bound == transposition::bound::EXACT) ||
                 (table_bound == transposition::bound::LOWER && table_score >= beta) ||
                 (table_bound == transposition::bound::UPPER && table_score <= alpha)) {
@@ -241,7 +247,7 @@ i32 Engine::negamax(Data& data, i32 alpha, i32 beta, i32 depth, PV& pv)
     auto moves = move::generate::get_legal<move::generate::type::ALL>(data.board);
     auto moves_scores = move::order::get_score(moves, data, table_move);
 
-    // Continues searching
+    // Iterates moves
     for (usize i = 0; i < moves.size(); ++i) {
         // Picks the move to search based on move ordering
         move::order::sort(moves, moves_scores, i);
@@ -253,8 +259,18 @@ i32 Engine::negamax(Data& data, i32 alpha, i32 beta, i32 depth, PV& pv)
         // Prefetch table
         this->table.prefetch(data.board.get_hash());
 
-        // Searchs deeper
-        i32 score = -this->negamax(data, -beta, -alpha, depth - 1, pv_next);
+        // Principle variation search
+        i32 score;
+
+        // Scouts with null window for non pv nodes
+        if (!is_pv || i > 0) {
+            score = -this->pvsearch<node::NORMAL>(data, -alpha - 1, -alpha, depth - 1, pv_next);
+        }
+
+        // Searches as pv node for first child or researches after scouting
+        if (is_pv && (i == 0 || score > alpha)) {
+            score = -this->pvsearch<node::PV>(data, -beta, -alpha, depth - 1, pv_next);
+        }
 
         // Unmakes
         data.board.unmake(moves[i]);
@@ -315,7 +331,7 @@ i32 Engine::negamax(Data& data, i32 alpha, i32 beta, i32 depth, PV& pv)
         best > alpha_old ? transposition::bound::EXACT :
         transposition::bound::UPPER;
     
-    table_entry->set(data.board.get_hash(), best_move, best, eval::score::NONE, depth, true, bound, data.ply, this->table.age);
+    table_entry->set(data.board.get_hash(), best_move, best, eval::score::NONE, depth, bound, data.ply, this->table.age);
 
     return best;
 };
@@ -363,12 +379,12 @@ i32 Engine::qsearch(Data& data, i32 alpha, i32 beta, PV& pv)
         i32 table_score = table_entry->get_score(data.ply);
         i32 table_depth = table_entry->get_depth();
 
-        // Returns when score is exact or produces a cutoff
-        if ((table_bound == transposition::bound::EXACT) ||
-            (table_bound == transposition::bound::LOWER && table_score >= beta) ||
-            (table_bound == transposition::bound::UPPER && table_score <= alpha)) {
-            return table_score;
-        }
+        // Returns when score is exact or produces a cutoff in pv nodes
+            if ((table_bound == transposition::bound::EXACT) ||
+                (table_bound == transposition::bound::LOWER && table_score >= beta) ||
+                (table_bound == transposition::bound::UPPER && table_score <= alpha)) {
+                return table_score;
+            }
     }
 
     // Inits data
@@ -407,7 +423,7 @@ i32 Engine::qsearch(Data& data, i32 alpha, i32 beta, PV& pv)
     // Scores moves
     auto moves_scores = move::order::get_score(moves, data, table_move);
 
-    // Makes moves
+    // Iterates moves
     for (usize i = 0; i < moves.size(); ++i) {
         // Picks the move to search based on move ordering
         move::order::sort(moves, moves_scores, i);
@@ -452,7 +468,7 @@ i32 Engine::qsearch(Data& data, i32 alpha, i32 beta, PV& pv)
         best > alpha_old ? transposition::bound::EXACT :
         transposition::bound::UPPER;
     
-    table_entry->set(data.board.get_hash(), best_move, best, eval::score::NONE, 0, true, bound, data.ply, this->table.age);
+    table_entry->set(data.board.get_hash(), best_move, best, eval::score::NONE, 0, bound, data.ply, this->table.age);
 
     return best;
 };

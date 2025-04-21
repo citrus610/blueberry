@@ -11,6 +11,13 @@
 namespace search
 {
 
+enum class node
+{
+    ROOT,
+    PV,
+    NORMAL
+};
+
 struct Settings
 {
     i32 depth;
@@ -66,7 +73,8 @@ public:
     bool stop();
     bool join();
 public:
-    i32 negamax(Data& data, i32 alpha, i32 beta, i32 depth, PV& pv);
+    template <node NODE>
+    i32 pvsearch(Data& data, i32 alpha, i32 beta, i32 depth, PV& pv);
     i32 qsearch(Data& data, i32 alpha, i32 beta, PV& pv);
 };
 
