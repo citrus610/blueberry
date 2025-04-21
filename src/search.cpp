@@ -192,10 +192,6 @@ i32 Engine::negamax(Data& data, i32 alpha, i32 beta, i32 depth, PV& pv)
     data.nodes += 1;
     data.seldepth = std::max(data.seldepth, data.ply);
 
-    // Init pv
-    pv.count = 0;
-    auto pv_next = PV();
-
     // Checks drawn
     if (data.board.is_drawn_repitition() || data.board.is_drawn_fifty_move() || data.board.is_drawn_insufficient()) {
         return i32(data.nodes & 0b10) - 1;
@@ -232,7 +228,10 @@ i32 Engine::negamax(Data& data, i32 alpha, i32 beta, i32 depth, PV& pv)
         }
     }
 
-    // Best score
+    // Inits data
+    pv.count = 0;
+    auto pv_next = PV();
+
     i32 best = -eval::score::INFINITE;
     u16 best_move = move::NONE_MOVE;
 
@@ -341,10 +340,6 @@ i32 Engine::qsearch(Data& data, i32 alpha, i32 beta, PV& pv)
     data.nodes += 1;
     data.seldepth = std::max(data.seldepth, data.ply);
 
-    // Init pv
-    pv.count = 0;
-    auto pv_next = PV();
-
     // Checks if we're in check
     bool is_in_check = data.board.is_in_check(data.board.get_color());
 
@@ -376,7 +371,10 @@ i32 Engine::qsearch(Data& data, i32 alpha, i32 beta, PV& pv)
         }
     }
 
-    // Updates best eval based on if we're in check
+    // Inits data
+    pv.count = 0;
+    auto pv_next = PV();
+
     i32 best;
     u16 best_move = move::NONE_MOVE;
 
