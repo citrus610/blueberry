@@ -11,7 +11,7 @@ PV::PV()
 
 void PV::clear()
 {
-    for (i32 i = 0; i < Board::MAX_PLY; ++i) {
+    for (i32 i = 0; i < MAX_PLY; ++i) {
         this->data[i] = move::NONE_MOVE;
     }
 
@@ -31,11 +31,7 @@ void PV::update(u16 move, const PV& other)
 
 void Data::clear()
 {
-    for (i32 i = 0; i < Board::MAX_PLY; ++i) {
-        this->pv_table[i].clear();
-    }
-
-    for (i32 i = 0; i < Board::MAX_PLY; ++i) {
+    for (i32 i = 0; i < MAX_PLY; ++i) {
         this->killer_table[i] = move::NONE_MOVE;
     }
 
@@ -50,6 +46,7 @@ void Data::clear()
     this->ply = 0;
 
     this->nodes = 0;
+    this->seldepth = 0;
 };
 
 Engine::Engine()
@@ -57,86 +54,98 @@ Engine::Engine()
     this->clear();
 };
 
+void Engine::init()
+{
+    this->table.init(2);
+};
+
 void Engine::clear()
 {
     this->running.clear();
     this->thread = nullptr;
+
+    this->table.clear();
 };
 
-bool Engine::search(Board uci_board, Info uci_info)
+bool Engine::search(Board uci_board, Settings uci_setting)
 {
     if (this->running.test() || this->thread != nullptr) {
         return false;
     }
 
-    this->clear();
+    // Updates table
+    this->table.update();
+
+    // Sets search time
+    u64 time_start = timer::get_current();
+
+    this->time_end_soft = time_start + timer::get_available_soft(uci_setting.time[uci_board.get_color()], uci_setting.inc[uci_board.get_color()], uci_setting.movestogo);
+    this->time_end_hard = time_start + timer::get_available_hard(uci_setting.time[uci_board.get_color()]);
+
+    if (uci_setting.infinite) {
+        this->time_end_soft = UINT64_MAX;
+        this->time_end_hard = UINT64_MAX;
+    }
 
     // Starts search thread
     this->running.test_and_set();
 
-    this->thread = new std::thread([&] (Board board, Info info) {
-        // Total search time
-        u64 time = 0;
-
+    this->thread = new std::thread([&] (Board board, Settings settings) {
         // Storing best pv lines found in each iteration
         std::vector<PV> pv_history = {};
 
         // Iterative deepening
-        for (i32 i = 1; i < info.depth; ++i) {
+        for (i32 i = 1; i < settings.depth; ++i) {
             // Inits search data
             Data data;
             data.clear();
 
             data.board = board;
 
+            auto pv = PV();
+
             // Does negamax with alpha beta
             auto time_1 = std::chrono::high_resolution_clock::now();
 
-            i32 score = search::negamax(data, -eval::score::INFINITE, eval::score::INFINITE, i, running);
+            i32 score = this->pvsearch<node::ROOT>(data, -eval::score::INFINITE, eval::score::INFINITE, i, pv);
 
             auto time_2 = std::chrono::high_resolution_clock::now();
 
-            // Stops when the uci client sends stop
-            // We don't save the pv line when we stop the search abruptly
-            if (!this->running.test()) {
-                break;
-            }
-
             // Saves pv line
-            pv_history.push_back(data.pv_table[0]);
+            if (pv.count != 0 && pv.data[0] != move::NONE_MOVE) {
+                pv_history.push_back(pv);
+            }
 
             // Prints infos
             u64 dt = std::chrono::duration_cast<std::chrono::milliseconds>(time_2 - time_1).count();
 
-            uci::print_info(i, score, data.nodes, dt, pv_history.back());
+            uci::print_info(i, data.seldepth, score, data.nodes, dt, this->table.hashfull(), pv_history.back());
 
-            // Checks time
-            time += dt;
-
-            // For now we only do max depth 7
-            // Because depth >= 8 search are super slow without transposition table
-            // TODO: will remove this later
-            if (i >= 7 && data.nodes >= 1000000) {
-                this->running.clear();
-                break;
+            // Avoids searching too shallow
+            if (i < 4) {
+                continue;
             }
 
-            if (!info.infinite && time >= timer::get_available(info.time[board.get_color()], info.inc[board.get_color()], info.movestogo)) {
+            // Checks time
+            if (!settings.infinite && timer::get_current() >= this->time_end_soft) {
                 this->running.clear();
+            }
+
+            if (!this->running.test()) {
                 break;
             }
         }
 
         // Prints best move
         uci::print_bestmove(pv_history.back().data[0]);
-    }, uci_board, uci_info);
+    }, uci_board, uci_setting);
 
     return true;
 };
 
 bool Engine::stop()
 {
-    if (!this->running.test() || this->thread == nullptr) {
+    if (this->thread == nullptr) {
         return false;
     }
 
@@ -163,35 +172,88 @@ bool Engine::join()
     return true;
 };
 
-// Alpha-beta
-i32 negamax(Data& data, i32 alpha, i32 beta, i32 depth, std::atomic_flag& running)
+// Principle variation search
+template <node NODE>
+i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth, PV& pv)
 {
+    // Gets node type
+    constexpr bool is_pv = NODE == node::PV || NODE == node::ROOT;
+    constexpr bool is_root = NODE == node::ROOT;
+
     // Quiensence search
     if (depth <= 0) {
-        return search::qsearch(data, alpha, beta, running);
+        return this->qsearch(data, alpha, beta, pv);
     }
 
-    // Updates nodes count
-    data.nodes += 1;
+    // Aborts search
+    if ((data.nodes & 0xFFF) == 0) {
+        u64 time_now = timer::get_current();
 
+        if (time_now >= this->time_end_hard) {
+            this->running.clear();
+        }
+    }
+
+    if (!this->running.test()) {
+        return eval::score::DRAW;
+    }
+
+    // Inits pv
+    pv.count = 0;
+    auto pv_next = PV();
+
+    // Updates data
+    data.nodes += 1;
+    data.seldepth = std::max(data.seldepth, data.ply);
+
+    // Early stop condition
     // Checks drawn
     if (data.board.is_drawn_repitition() || data.board.is_drawn_fifty_move() || data.board.is_drawn_insufficient()) {
         return i32(data.nodes & 0b10) - 1;
     }
 
-    // Aborts search
-    if (!running.test()) {
-        return -eval::score::INFINITE;
+    // Mate distance pruning
+    alpha = std::max(alpha, data.ply - eval::score::MATE);
+    beta = std::min(beta, eval::score::MATE - data.ply - 1);
+
+    if (alpha >= beta) {
+        return alpha;
+    }
+
+    // Probes table
+    auto [table_hit, table_entry] = this->table.get(data.board.get_hash());
+
+    u16 table_move = move::NONE_MOVE;
+
+    if (table_hit) {
+        table_move = table_entry->get_move();
+
+        u8 table_bound = table_entry->get_bound();
+        i32 table_score = table_entry->get_score(data.ply);
+        i32 table_depth = table_entry->get_depth();
+
+        // Checks if the same position has already been searched to at least an equal depth in non PV nodes
+        // Returns when score is exact or produces a cutoff
+        if (table_depth >= depth && !is_pv) {
+            if ((table_bound == transposition::bound::EXACT) ||
+                (table_bound == transposition::bound::LOWER && table_score >= beta) ||
+                (table_bound == transposition::bound::UPPER && table_score <= alpha)) {
+                return table_score;
+            }
+        }
     }
 
     // Best score
     i32 best = -eval::score::INFINITE;
+    u16 best_move = move::NONE_MOVE;
+
+    i32 alpha_old = alpha;
 
     // Generate moves and scores them
     auto moves = move::generate::get_legal<move::generate::type::ALL>(data.board);
-    auto moves_scores = move::order::get_score(moves, data);
+    auto moves_scores = move::order::get_score(moves, data, table_move);
 
-    // Continues searching
+    // Iterates moves
     for (usize i = 0; i < moves.size(); ++i) {
         // Picks the move to search based on move ordering
         move::order::sort(moves, moves_scores, i);
@@ -200,18 +262,37 @@ i32 negamax(Data& data, i32 alpha, i32 beta, i32 depth, std::atomic_flag& runnin
         data.board.make(moves[i]);
         data.ply += 1;
 
-        // Searchs deeper
-        i32 score = -search::negamax(data, -beta, -alpha, depth - 1, running);
+        // Prefetch table
+        this->table.prefetch(data.board.get_hash());
+
+        // Principle variation search
+        i32 score;
+
+        // Scouts with null window for non pv nodes
+        if (!is_pv || i > 0) {
+            score = -this->pvsearch<node::NORMAL>(data, -alpha - 1, -alpha, depth - 1, pv_next);
+        }
+
+        // Searches as pv node for first child or researches after scouting
+        if (is_pv && (i == 0 || score > alpha)) {
+            score = -this->pvsearch<node::PV>(data, -beta, -alpha, depth - 1, pv_next);
+        }
 
         // Unmakes
         data.board.unmake(moves[i]);
         data.ply -= 1;
+
+        // Aborts search
+        if (!this->running.test()) {
+            return eval::score::DRAW;
+        }
 
         bool is_quiet = data.board.get_piece_at(move::get_square_to(moves[i])) == piece::NONE || move::get_type(moves[i]) == move::type::CASTLING;
 
         // Updates values
         if (score > best) {
             best = score;
+            best_move = moves[i];
 
             if (score > alpha) {
                 alpha = score;
@@ -225,7 +306,7 @@ i32 negamax(Data& data, i32 alpha, i32 beta, i32 depth, std::atomic_flag& runnin
                 }
     
                 // Updates pv line
-                data.pv_table[data.ply].update(moves[i], data.pv_table[data.ply + 1]);
+                pv.update(moves[i], pv_next);
             }
         }
 
@@ -236,7 +317,7 @@ i32 negamax(Data& data, i32 alpha, i32 beta, i32 depth, std::atomic_flag& runnin
                 data.killer_table[data.ply] = moves[i];
             }
 
-            return best;
+            break;
         }
     }
 
@@ -246,23 +327,44 @@ i32 negamax(Data& data, i32 alpha, i32 beta, i32 depth, std::atomic_flag& runnin
             return -eval::score::MATE + data.ply;
         }
         else {
-            return eval::score::DRAW;
+            return i32(data.nodes & 0b10) - 1;
         }
     }
+
+    // Updates table
+    u8 bound =
+        best >= beta ? transposition::bound::LOWER :
+        best > alpha_old ? transposition::bound::EXACT :
+        transposition::bound::UPPER;
+    
+    table_entry->set(data.board.get_hash(), best_move, best, eval::score::NONE, depth, bound, data.ply, this->table.age);
 
     return best;
 };
 
 // Quiescence search
-i32 qsearch(Data& data, i32 alpha, i32 beta, std::atomic_flag& running)
+i32 Engine::qsearch(Data& data, i32 alpha, i32 beta, PV& pv)
 {
-    // Updates nodes count
-    data.nodes += 1;
-
     // Aborts search
-    if (!running.test()) {
-        return alpha;
+    if ((data.nodes & 0xFFF) == 0) {
+        u64 time_now = timer::get_current();
+
+        if (time_now >= this->time_end_hard) {
+            this->running.clear();
+        }
     }
+
+    if (!this->running.test()) {
+        return eval::score::DRAW;
+    }
+
+    // Inits pv
+    pv.count = 0;
+    auto pv_next = PV();
+
+    // Updates data
+    data.nodes += 1;
+    data.seldepth = std::max(data.seldepth, data.ply);
 
     // Checks if we're in check
     bool is_in_check = data.board.is_in_check(data.board.get_color());
@@ -271,16 +373,39 @@ i32 qsearch(Data& data, i32 alpha, i32 beta, std::atomic_flag& running)
     i32 standpat = eval::get(data.board);
     
     // Max ply reached
-    if (data.ply >= Board::MAX_PLY) {
+    if (data.ply >= MAX_PLY) {
         return is_in_check ? 0 : standpat;
     }
 
-    // Updates best eval based on if we're in check
+    // Probes table
+    auto [table_hit, table_entry] = this->table.get(data.board.get_hash());
+
+    u16 table_move = move::NONE_MOVE;
+
+    if (table_hit) {
+        table_move = table_entry->get_move();
+
+        u8 table_bound = table_entry->get_bound();
+        i32 table_score = table_entry->get_score(data.ply);
+        i32 table_depth = table_entry->get_depth();
+
+        // Returns when score is exact or produces a cutoff in pv nodes
+        if ((table_bound == transposition::bound::EXACT) ||
+            (table_bound == transposition::bound::LOWER && table_score >= beta) ||
+            (table_bound == transposition::bound::UPPER && table_score <= alpha)) {
+            return table_score;
+        }
+    }
+
+    // Best score
     i32 best;
+    u16 best_move = move::NONE_MOVE;
+
+    i32 alpha_old = alpha;
 
     if (is_in_check) {
         // Possible mate here
-        best = -eval::score::INFINITE;
+        best = -eval::score::MATE + data.ply;
     }
     else {
         best = standpat;
@@ -296,17 +421,16 @@ i32 qsearch(Data& data, i32 alpha, i32 beta, std::atomic_flag& running)
         }
     }
 
-    // Generates noisy moves
-    // If we're in check, generates all legal moves
+    // If we're in check, generates all legal moves, else generates noisy moves
     auto moves = 
         is_in_check ?
         move::generate::get_legal<move::generate::type::ALL>(data.board) :
         move::generate::get_legal<move::generate::type::NOISY>(data.board);
     
     // Scores moves
-    auto moves_scores = move::order::get_score(moves, data);
+    auto moves_scores = move::order::get_score(moves, data, table_move);
 
-    // Makes moves
+    // Iterates moves
     for (usize i = 0; i < moves.size(); ++i) {
         // Picks the move to search based on move ordering
         move::order::sort(moves, moves_scores, i);
@@ -316,11 +440,16 @@ i32 qsearch(Data& data, i32 alpha, i32 beta, std::atomic_flag& running)
         data.ply += 1;
 
         // Searches deeper
-        i32 score = -search::qsearch(data, -beta, -alpha, running);
+        i32 score = -this->qsearch(data, -beta, -alpha, pv_next);
 
         // Unmakes
         data.board.unmake(moves[i]);
         data.ply -= 1;
+
+        // Aborts search
+        if (!this->running.test()) {
+            return eval::score::DRAW;
+        }
 
         // Updates values
         if (score > best) {
@@ -328,9 +457,9 @@ i32 qsearch(Data& data, i32 alpha, i32 beta, std::atomic_flag& running)
 
             if (score > alpha) {
                 alpha = score;
-    
+
                 // Updates pv line
-                data.pv_table[data.ply].update(moves[i], data.pv_table[data.ply + 1]);
+                pv.update(moves[i], pv_next);
             }
         }
 
@@ -340,10 +469,13 @@ i32 qsearch(Data& data, i32 alpha, i32 beta, std::atomic_flag& running)
         }
     }
 
-    // Special case if we are in check
-    if (is_in_check && moves.size() == 0) {
-        return -eval::score::MATE + data.ply;
-    }
+    // Updates table
+    u8 bound =
+        best >= beta ? transposition::bound::LOWER :
+        best > alpha_old ? transposition::bound::EXACT :
+        transposition::bound::UPPER;
+    
+    table_entry->set(data.board.get_hash(), best_move, best, eval::score::NONE, 0, bound, data.ply, this->table.age);
 
     return best;
 };

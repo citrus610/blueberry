@@ -104,10 +104,10 @@ std::optional<Board> get_command_position(std::string in)
     return board;
 };
 
-std::optional<search::Info> get_command_go(std::string in)
+std::optional<search::Settings> get_command_go(std::string in)
 {
-    auto info = search::Info {
-        .depth = Board::MAX_PLY,
+    auto info = search::Settings {
+        .depth = MAX_PLY,
         .time = { 0, 0 },
         .inc = { 0, 0 },
         .movestogo = {},
@@ -155,14 +155,16 @@ std::optional<search::Info> get_command_go(std::string in)
     return info;
 };
 
-void print_info(i32 depth, i32 score, u64 nodes, u64 ms, search::PV pv)
+void print_info(i32 depth, i32 seldepth, i32 score, u64 nodes, u64 ms, u64 hashfull, search::PV pv)
 {
     std::cout << "info ";
 
     std::cout << "depth " << depth << " ";
 
-    if (score >= eval::score::MATE - Board::MAX_PLY || score <= -eval::score::MATE + Board::MAX_PLY) {
-        std::cout << "score mate " << (std::abs(eval::score::MATE - std::abs(score)) / 2) << " ";
+    std::cout << "seldepth " << seldepth << " ";
+
+    if (score >= eval::score::MATE_FOUND || score <= -eval::score::MATE_FOUND) {
+        std::cout << "score mate " << ((eval::score::MATE - score) / 2) << " ";
     }
     else {
         std::cout << "score cp " << score << " ";
@@ -171,6 +173,8 @@ void print_info(i32 depth, i32 score, u64 nodes, u64 ms, search::PV pv)
     std::cout << "nodes " << nodes << " ";
 
     std::cout << "nps " << (nodes * 1000 / std::max(ms, 1ULL)) << " ";
+
+    std::cout << "hashfull " << hashfull <<  " ";
 
     std::cout << "pv ";
     

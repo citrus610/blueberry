@@ -5,11 +5,15 @@ int main()
     init();
 
     auto board = Board();
-    auto info = search::Info();
+    auto settings = search::Settings();
     auto engine = search::Engine();
 
     const std::string NAME = "blueberry v0.1";
     const std::string AUTHOR = "citrus610";
+
+    // Init table
+    // TODO: remove this and move it to when uci sends options
+    engine.init();
 
     while (true)
     {
@@ -48,7 +52,7 @@ int main()
 
         if (tokens[0] == "ucinewgame") {
             board = Board();
-            info = search::Info();
+            settings = search::Settings();
 
             engine.stop();
             engine.clear();
@@ -65,25 +69,26 @@ int main()
 
             board = board_uci.value();
 
+            std::cout << board.get_fen() << std::endl;
+
             continue;
         }
 
         if (tokens[0] == "go") {
             // Reads go infos
-            auto info_uci = uci::get_command_go(input);
+            auto settings_uci = uci::get_command_go(input);
 
-            if (!info_uci.has_value()) {
+            if (!settings_uci.has_value()) {
                 continue;
             }
 
-            info = info_uci.value();
+            settings = settings_uci.value();
 
             // Stops thread
             engine.stop();
-            engine.clear();
 
             // Starts search thread
-            engine.search(board, info);
+            engine.search(board, settings);
 
             continue;
         }
@@ -91,7 +96,6 @@ int main()
         if (tokens[0] == "stop") {
             // Stops thread
             engine.stop();
-            engine.clear();
 
             continue;
         }
@@ -99,7 +103,6 @@ int main()
         if (tokens[0] == "quit" || tokens[0] == "exit") {
             // Stops thread
             engine.stop();
-            engine.clear();
 
             break;
         }

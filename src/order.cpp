@@ -4,11 +4,17 @@
 namespace move::order
 {
 
-arrayvec<i32, move::MAX_MOVE> get_score(const arrayvec<u16, move::MAX_MOVE>& moves, search::Data& data)
+arrayvec<i32, move::MAX_MOVE> get_score(const arrayvec<u16, move::MAX_MOVE>& moves, search::Data& data, u16 hash_move)
 {
     auto scores = arrayvec<i32, move::MAX_MOVE>();
 
     for (usize i = 0; i < moves.size(); ++i) {
+        // Hash move
+        if (moves[i] == hash_move) {
+            scores.add(move::order::HASH_SCORE);
+            continue;
+        }
+
         // MVV LVA
         i8 piece = data.board.get_piece_at(move::get_square_from(moves[i]));
         i8 captured = data.board.get_piece_type_at(move::get_square_to(moves[i]));
@@ -33,9 +39,9 @@ arrayvec<i32, move::MAX_MOVE> get_score(const arrayvec<u16, move::MAX_MOVE>& mov
 
 void sort(arrayvec<u16, move::MAX_MOVE>& moves, arrayvec<i32, move::MAX_MOVE>& moves_scores, usize index)
 {
-    usize best = 0;
+    usize best = index;
 
-    for (usize i = index; i < moves.size(); ++i) {
+    for (usize i = index + 1; i < moves.size(); ++i) {
         if (moves_scores[i] > moves_scores[best]) {
             best = i;
         }

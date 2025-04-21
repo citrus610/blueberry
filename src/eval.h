@@ -6,7 +6,9 @@ namespace eval::score
 {
 
 constexpr i32 DRAW = 0;
-constexpr i32 MATE = INT16_MAX - 1;
+constexpr i32 MATE = 32000 + MAX_PLY;
+constexpr i32 MATE_FOUND = MATE - MAX_PLY;
+constexpr i32 NONE = MATE + 1;
 constexpr i32 INFINITE = INT16_MAX;
 
 constexpr i32 create(i32 midgame, i32 endgame)
@@ -56,11 +58,11 @@ struct Weight
 
 constexpr Weight DEFAULT = Weight {
     .material_pawn = 100,
-    .material_knight = 300,
+    .material_knight = 320,
     .material_bishop = 330,
     .material_rook = 500,
     .material_queen = 900,
-    .material_king = 1000,
+    .material_king = 10000,
 
     .table = {
         {
@@ -127,8 +129,8 @@ constexpr Weight DEFAULT = Weight {
 
     .mobility_knight = 10,
     .mobility_bishop = 5,
-    .mobility_rook = 5,
-    .mobility_queen = 5,
+    .mobility_rook = 0,
+    .mobility_queen = 0,
     .mobility_king = 0,
 
     .tempo = 20

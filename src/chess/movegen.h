@@ -5,24 +5,19 @@
 
 #include "../util/arrayvec.h"
 
-namespace move::generate::type
+namespace move::generate
 {
 
-enum : i8
+enum class type : i8
 {
     ALL,
     NOISY,
     QUIET
 };
 
-};
-
-namespace move::generate
-{
-
 // Gets the check mask for a color
 // Gets the mask for all the enemy's attackers and their lines of attack
-template<i8 COLOR>
+template <i8 COLOR>
 inline std::pair<u64, i32> get_check_mask(Board &board, i8 square)
 {
     const u64 occupied = board.get_occupied();
@@ -78,7 +73,7 @@ inline std::pair<u64, i32> get_check_mask(Board &board, i8 square)
 };
 
 // Gets the ray masks of the enemy rooks that pin our pieces
-template<i8 COLOR>
+template <i8 COLOR>
 inline u64 get_pin_mask_rook(Board &board, i8 square)
 {
     const u64 occupied_us = board.get_colors(COLOR);
@@ -106,7 +101,7 @@ inline u64 get_pin_mask_rook(Board &board, i8 square)
 };
 
 // Gets the ray masks of the enemy bishops that pin our pieces
-template<i8 COLOR>
+template <i8 COLOR>
 inline u64 get_pin_mask_bishop(Board &board, i8 square)
 {
     const u64 occupied_us = board.get_colors(COLOR);
@@ -134,7 +129,7 @@ inline u64 get_pin_mask_bishop(Board &board, i8 square)
 };
 
 // Gets the mask of all seen squares
-template<i8 COLOR>
+template <i8 COLOR>
 inline u64 get_seen_mask(Board &board, u64 enemy_empty)
 {
     i8 enemy_king_square = board.get_king_square(!COLOR);
@@ -188,7 +183,7 @@ inline u64 get_seen_mask(Board &board, u64 enemy_empty)
 };
 
 // Gets the mask of all the castle-possible rooks
-template<i8 TYPE, i8 COLOR>
+template <type TYPE, i8 COLOR>
 inline u64 get_castle_rook_mask(Board& board, u64 seen_mask, u64 pin_mask_rook)
 {
     if constexpr (TYPE == move::generate::type::NOISY) {
@@ -241,7 +236,7 @@ inline u64 get_castle_rook_mask(Board& board, u64 seen_mask, u64 pin_mask_rook)
 };
 
 // Adds pawn moves to the move list
-template<i8 TYPE, i8 COLOR>
+template <type TYPE, i8 COLOR>
 inline void push_pawn(arrayvec<u16, MAX_MOVE>& list, Board& board, u64 check_mask, u64 pin_mask_rook, u64 pin_mask_bishop)
 {
     constexpr i8 UP = direction::get_color_direction(direction::NORTH, COLOR);
@@ -407,7 +402,7 @@ inline void push_pawn(arrayvec<u16, MAX_MOVE>& list, Board& board, u64 check_mas
 };
 
 // Helper function
-template<typename T>
+template <typename T>
 inline void while_mask_add(arrayvec<u16, MAX_MOVE>& list, u64 mask, T callback)
 {
     while (mask)
@@ -428,7 +423,7 @@ inline void while_mask_add(arrayvec<u16, MAX_MOVE>& list, u64 mask, T callback)
 }
 
 // Gets all legal moves
-template<i8 TYPE, i8 COLOR>
+template <type TYPE, i8 COLOR>
 inline arrayvec<u16, MAX_MOVE> get_legal(Board& board)
 {
     auto list = arrayvec<u16, MAX_MOVE>();
@@ -541,7 +536,7 @@ inline arrayvec<u16, MAX_MOVE> get_legal(Board& board)
 };
 
 // Gets all legal moves for the side to move of this board
-template<i8 TYPE>
+template <type TYPE>
 inline arrayvec<u16, MAX_MOVE> get_legal(Board& board)
 {
     if (board.get_color() == color::WHITE) {
