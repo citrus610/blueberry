@@ -121,6 +121,11 @@ bool Engine::search(Board uci_board, Settings uci_setting)
 
             uci::print_info(i, data.seldepth, score, data.nodes, dt, this->table.hashfull(), pv_history.back());
 
+            // Avoids searching too shallow
+            if (i < 4) {
+                continue;
+            }
+
             // Checks time
             if (!settings.infinite && timer::get_current() >= this->time_end_soft) {
                 this->running.clear();
@@ -380,11 +385,11 @@ i32 Engine::qsearch(Data& data, i32 alpha, i32 beta, PV& pv)
         i32 table_depth = table_entry->get_depth();
 
         // Returns when score is exact or produces a cutoff in pv nodes
-            if ((table_bound == transposition::bound::EXACT) ||
-                (table_bound == transposition::bound::LOWER && table_score >= beta) ||
-                (table_bound == transposition::bound::UPPER && table_score <= alpha)) {
-                return table_score;
-            }
+        if ((table_bound == transposition::bound::EXACT) ||
+            (table_bound == transposition::bound::LOWER && table_score >= beta) ||
+            (table_bound == transposition::bound::UPPER && table_score <= alpha)) {
+            return table_score;
+        }
     }
 
     // Inits data
