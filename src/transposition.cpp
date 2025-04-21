@@ -82,7 +82,7 @@ void Entry::set(u64 hash, u16 move, i32 score, i32 eval, i32 depth, bool pv, u8 
     if (bound == bound::EXACT ||
         this->hash != static_cast<u16>(hash) ||
         this->get_age() != table_age ||
-        depth + 4 + static_cast<u8>(pv) * 2 > this->depth) {
+        depth + 4 + static_cast<i32>(pv) * 2 > this->depth) {
         this->hash = static_cast<u16>(hash);
         this->depth = static_cast<u8>(depth);
         this->set_score(score, ply);
@@ -129,13 +129,13 @@ void Table::init(u64 mb)
 
     this->buckets = static_cast<Bucket*>(malloc_aligned(alignment, mb * MB));
 
+    this->age = 0;
+
     std::cout << "alloced " << this->buckets << std::endl;
 };
 
 void Table::clear(usize thread_count)
 {
-    this->age = 0;
-
     if (this->buckets == nullptr) {
         return;
     }
