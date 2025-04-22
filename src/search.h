@@ -42,6 +42,7 @@ public:
 class Data
 {
 public:
+    PV pv_table[MAX_PLY];
     u16 killer_table[MAX_PLY];
     i32 history_table[12][64];
 public:
@@ -74,8 +75,8 @@ public:
     bool join();
 public:
     template <node NODE>
-    i32 pvsearch(Data& data, i32 alpha, i32 beta, i32 depth, PV& pv);
-    i32 qsearch(Data& data, i32 alpha, i32 beta, PV& pv);
+    i32 pvsearch(Data& data, i32 alpha, i32 beta, i32 depth);
+    i32 qsearch(Data& data, i32 alpha, i32 beta);
 };
 
 };

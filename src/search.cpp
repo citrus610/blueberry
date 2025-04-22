@@ -32,6 +32,10 @@ void PV::update(u16 move, const PV& other)
 void Data::clear()
 {
     for (i32 i = 0; i < MAX_PLY; ++i) {
+        this->pv_table[i].clear();
+    }
+
+    for (i32 i = 0; i < MAX_PLY; ++i) {
         this->killer_table[i] = move::NONE_MOVE;
     }
 
@@ -102,18 +106,16 @@ bool Engine::search(Board uci_board, Settings uci_setting)
 
             data.board = board;
 
-            auto pv = PV();
-
             // Does negamax with alpha beta
             auto time_1 = std::chrono::high_resolution_clock::now();
 
-            i32 score = this->pvsearch<node::ROOT>(data, -eval::score::INFINITE, eval::score::INFINITE, i, pv);
+            i32 score = this->pvsearch<node::ROOT>(data, -eval::score::INFINITE, eval::score::INFINITE, i);
 
             auto time_2 = std::chrono::high_resolution_clock::now();
 
             // Saves pv line
-            if (pv.count != 0 && pv.data[0] != move::NONE_MOVE) {
-                pv_history.push_back(pv);
+            if (data.pv_table[0].count != 0 && data.pv_table[0].data[0] != move::NONE_MOVE) {
+                pv_history.push_back(data.pv_table[0]);
             }
 
             // Prints infos
@@ -174,7 +176,7 @@ bool Engine::join()
 
 // Principle variation search
 template <node NODE>
-i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth, PV& pv)
+i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
 {
     // Gets node type
     constexpr bool is_pv = NODE == node::PV || NODE == node::ROOT;
@@ -182,7 +184,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth, PV& pv)
 
     // Quiensence search
     if (depth <= 0) {
-        return this->qsearch(data, alpha, beta, pv);
+        return this->qsearch(data, alpha, beta);
     }
 
     // Aborts search
@@ -199,8 +201,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth, PV& pv)
     }
 
     // Inits pv
-    pv.count = 0;
-    auto pv_next = PV();
+    data.pv_table[data.ply].count = 0;
 
     // Updates data
     data.nodes += 1;
@@ -270,12 +271,12 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth, PV& pv)
 
         // Scouts with null window for non pv nodes
         if (!is_pv || i > 0) {
-            score = -this->pvsearch<node::NORMAL>(data, -alpha - 1, -alpha, depth - 1, pv_next);
+            score = -this->pvsearch<node::NORMAL>(data, -alpha - 1, -alpha, depth - 1);
         }
 
         // Searches as pv node for first child or researches after scouting
         if (is_pv && (i == 0 || score > alpha)) {
-            score = -this->pvsearch<node::PV>(data, -beta, -alpha, depth - 1, pv_next);
+            score = -this->pvsearch<node::PV>(data, -beta, -alpha, depth - 1);
         }
 
         // Unmakes
@@ -306,7 +307,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth, PV& pv)
                 }
     
                 // Updates pv line
-                pv.update(moves[i], pv_next);
+                data.pv_table[data.ply].update(moves[i], data.pv_table[data.ply + 1]);
             }
         }
 
@@ -343,7 +344,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth, PV& pv)
 };
 
 // Quiescence search
-i32 Engine::qsearch(Data& data, i32 alpha, i32 beta, PV& pv)
+i32 Engine::qsearch(Data& data, i32 alpha, i32 beta)
 {
     // Aborts search
     if ((data.nodes & 0xFFF) == 0) {
@@ -359,8 +360,7 @@ i32 Engine::qsearch(Data& data, i32 alpha, i32 beta, PV& pv)
     }
 
     // Inits pv
-    pv.count = 0;
-    auto pv_next = PV();
+    data.pv_table[data.ply].count = 0;
 
     // Updates data
     data.nodes += 1;
@@ -440,7 +440,7 @@ i32 Engine::qsearch(Data& data, i32 alpha, i32 beta, PV& pv)
         data.ply += 1;
 
         // Searches deeper
-        i32 score = -this->qsearch(data, -beta, -alpha, pv_next);
+        i32 score = -this->qsearch(data, -beta, -alpha);
 
         // Unmakes
         data.board.unmake(moves[i]);
@@ -459,7 +459,7 @@ i32 Engine::qsearch(Data& data, i32 alpha, i32 beta, PV& pv)
                 alpha = score;
 
                 // Updates pv line
-                pv.update(moves[i], pv_next);
+                data.pv_table[data.ply].update(moves[i], data.pv_table[data.ply + 1]);
             }
         }
 
