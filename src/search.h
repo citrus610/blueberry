@@ -43,6 +43,7 @@ class Data
 {
 public:
     PV pv_table[MAX_PLY];
+public:
     u16 killer_table[MAX_PLY];
     i32 history_table[12][64];
 public:
