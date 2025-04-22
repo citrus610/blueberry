@@ -209,18 +209,21 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
     data.nodes += 1;
     data.seldepth = std::max(data.seldepth, data.ply);
 
-    // Early stop condition
-    // - Checks drawn
-    if (data.board.is_drawn_repitition() || data.board.is_drawn_fifty_move() || data.board.is_drawn_insufficient()) {
-        return i32(data.nodes & 0b10) - 1;
-    }
+    // Early stop conditions
+    // - Don't exit early in the root node, since this would prevent us from having a best move
+    if (!is_root) {
+        // Checks drawn
+        if (data.board.is_drawn_repitition() || data.board.is_drawn_fifty_move() || data.board.is_drawn_insufficient()) {
+            return i32(data.nodes & 0b10) - 1;
+        }
 
-    // - Mate distance pruning
-    alpha = std::max(alpha, data.ply - eval::score::MATE);
-    beta = std::min(beta, eval::score::MATE - data.ply - 1);
+        // Mate distance pruning
+        alpha = std::max(alpha, data.ply - eval::score::MATE);
+        beta = std::min(beta, eval::score::MATE - data.ply - 1);
 
-    if (alpha >= beta) {
-        return alpha;
+        if (alpha >= beta) {
+            return alpha;
+        }
     }
 
     // Probes transposition table
