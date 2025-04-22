@@ -183,11 +183,15 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
     constexpr bool is_root = NODE == node::ROOT;
 
     // Quiensence search
+    // - We keep searching noisy moves until a quiet position is reached for static evaluation
+    // - This reduces the horizon effect
     if (depth <= 0) {
         return this->qsearch(data, alpha, beta);
     }
 
     // Aborts search
+    // - Every now and then check if we have exceeded the hard time limit
+    // - Stops searching
     if ((data.nodes & 0xFFF) == 0) {
         u64 time_now = timer::get_current();
 
@@ -199,29 +203,32 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
     if (!this->running.test()) {
         return eval::score::DRAW;
     }
-
-    // Inits pv
-    data.pv_table[data.ply].count = 0;
-
+    
     // Updates data
+    data.pv_table[data.ply].count = 0;
     data.nodes += 1;
     data.seldepth = std::max(data.seldepth, data.ply);
 
-    // Early stop condition
-    // Checks drawn
-    if (data.board.is_drawn_repitition() || data.board.is_drawn_fifty_move() || data.board.is_drawn_insufficient()) {
-        return i32(data.nodes & 0b10) - 1;
+    // Early stop conditions
+    // - Don't exit early in the root node, since this would prevent us from having a best move
+    if (!is_root) {
+        // Checks drawn
+        if (data.board.is_drawn_repitition() || data.board.is_drawn_fifty_move() || data.board.is_drawn_insufficient()) {
+            return i32(data.nodes & 0b10) - 1;
+        }
+
+        // Mate distance pruning
+        alpha = std::max(alpha, data.ply - eval::score::MATE);
+        beta = std::min(beta, eval::score::MATE - data.ply - 1);
+
+        if (alpha >= beta) {
+            return alpha;
+        }
     }
 
-    // Mate distance pruning
-    alpha = std::max(alpha, data.ply - eval::score::MATE);
-    beta = std::min(beta, eval::score::MATE - data.ply - 1);
-
-    if (alpha >= beta) {
-        return alpha;
-    }
-
-    // Probes table
+    // Probes transposition table
+    // - Checks if the same position has already been searched to at least an equal depth in non PV nodes
+    // - Returns when score is exact or produces a cutoff
     auto [table_hit, table_entry] = this->table.get(data.board.get_hash());
 
     u16 table_move = move::NONE_MOVE;
@@ -233,8 +240,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         i32 table_score = table_entry->get_score(data.ply);
         i32 table_depth = table_entry->get_depth();
 
-        // Checks if the same position has already been searched to at least an equal depth in non PV nodes
-        // Returns when score is exact or produces a cutoff
+        // Cut off
         if (table_depth >= depth && !is_pv) {
             if ((table_bound == transposition::bound::EXACT) ||
                 (table_bound == transposition::bound::LOWER && table_score >= beta) ||
@@ -243,6 +249,14 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
             }
         }
     }
+
+    // In check
+    bool is_in_check = data.board.is_in_check(data.board.get_color());
+
+    // Check extension
+    // - Increase the depth to search if we are in check
+    // - We don't have to do this before qsearch because our qsearch has check evasion
+    i32 extension = is_in_check;
 
     // Best score
     i32 best = -eval::score::INFINITE;
@@ -271,12 +285,12 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
 
         // Scouts with null window for non pv nodes
         if (!is_pv || i > 0) {
-            score = -this->pvsearch<node::NORMAL>(data, -alpha - 1, -alpha, depth - 1);
+            score = -this->pvsearch<node::NORMAL>(data, -alpha - 1, -alpha, depth - 1 + extension);
         }
 
         // Searches as pv node for first child or researches after scouting
         if (is_pv && (i == 0 || score > alpha)) {
-            score = -this->pvsearch<node::PV>(data, -beta, -alpha, depth - 1);
+            score = -this->pvsearch<node::PV>(data, -beta, -alpha, depth - 1 + extension);
         }
 
         // Unmakes
@@ -312,6 +326,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         }
 
         // Fail-soft cutoff
+        // - This move is too good, our enemy won't let us do this
         if (score >= beta) {
             // Stores killer moves
             if (is_quiet) {
@@ -324,7 +339,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
 
     // Checks stalemate or checkmate
     if (moves.size() == 0) {
-        if (data.board.is_in_check(data.board.get_color())) {
+        if (is_in_check) {
             return -eval::score::MATE + data.ply;
         }
         else {
@@ -332,7 +347,8 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         }
     }
 
-    // Updates table
+    // Updates transposition table
+    // - Store results of search into the table
     u8 bound =
         best >= beta ? transposition::bound::LOWER :
         best > alpha_old ? transposition::bound::EXACT :
@@ -347,6 +363,8 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
 i32 Engine::qsearch(Data& data, i32 alpha, i32 beta)
 {
     // Aborts search
+    // - Every now and then check if we have exceeded the hard time limit
+    // - Stops searching
     if ((data.nodes & 0xFFF) == 0) {
         u64 time_now = timer::get_current();
 
@@ -358,15 +376,13 @@ i32 Engine::qsearch(Data& data, i32 alpha, i32 beta)
     if (!this->running.test()) {
         return eval::score::DRAW;
     }
-
-    // Inits pv
-    data.pv_table[data.ply].count = 0;
-
+    
     // Updates data
+    data.pv_table[data.ply].count = 0;
     data.nodes += 1;
     data.seldepth = std::max(data.seldepth, data.ply);
 
-    // Checks if we're in check
+    // In check
     bool is_in_check = data.board.is_in_check(data.board.get_color());
 
     // Gets static eval
@@ -454,6 +470,7 @@ i32 Engine::qsearch(Data& data, i32 alpha, i32 beta)
         // Updates values
         if (score > best) {
             best = score;
+            best_move = moves[i];
 
             if (score > alpha) {
                 alpha = score;
