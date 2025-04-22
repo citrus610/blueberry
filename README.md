@@ -9,6 +9,7 @@ UCI chess engine WIP
   - Iterative deepening
   - Principle variation search
   - Quiescence search
+    - Check evasion
   - Transposition table
     - Depth-preferred with aging replacement scheme
   - Move ordering
@@ -16,6 +17,8 @@ UCI chess engine WIP
     - MVV/LVA
     - Killer moves
     - History heuristic
+  - Extensions
+    - Check extensions
 - Evaluation
   - Material
   - Piece-square table
