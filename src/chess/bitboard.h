@@ -101,7 +101,7 @@ constexpr i32 get_msb(u64 bitboard)
 {
     assert(bitboard);
 
-    return std::countl_zero(bitboard);
+    return std::countl_zero(bitboard) ^ 63;
 };
 
 constexpr u64 get_pop_lsb(u64 bitboard)

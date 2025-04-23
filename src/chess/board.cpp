@@ -310,13 +310,26 @@ bool Board::is_drawn_fifty_move()
 
 bool Board::is_drawn_insufficient()
 {
-    return
-        !(this->pieces[piece::type::PAWN] | this->pieces[piece::type::ROOK] | this->pieces[piece::type::QUEEN]) &&
-        (!bitboard::is_many(this->colors[color::WHITE]) || !bitboard::is_many(this->colors[color::BLACK])) &&
-        (
-            !bitboard::is_many(this->pieces[piece::type::KNIGHT] | this->pieces[piece::type::BISHOP]) ||
-            (!this->pieces[piece::type::BISHOP] && bitboard::get_count(this->pieces[piece::type::KNIGHT]) <= 2)
-        );
+    i32 count = bitboard::get_count(this->get_occupied());
+
+    if (count == 2) {
+        return true;
+    }
+
+    if (count == 3) {
+        if (this->pieces[piece::type::KNIGHT] || this->pieces[piece::type::BISHOP]) {
+            return true;
+        }
+    }
+
+    if (count == 4) {
+        if (bitboard::is_many(this->pieces[piece::type::BISHOP]) &&
+            square::is_same_color(bitboard::get_lsb(this->pieces[piece::type::BISHOP]), bitboard::get_msb(this->pieces[piece::type::BISHOP]))) {
+            return true;
+        }
+    }
+
+    return false;
 };
 
 bool Board::is_square_attacked(i8 square, i8 color)
