@@ -98,6 +98,9 @@ bool Engine::search(Board uci_board, Settings uci_setting)
         // Storing best pv lines found in each iteration
         std::vector<PV> pv_history = {};
 
+        // Search score
+        i32 score = -eval::score::INFINITE;
+
         // Iterative deepening
         for (i32 i = 1; i < settings.depth; ++i) {
             // Inits search data
@@ -106,10 +109,10 @@ bool Engine::search(Board uci_board, Settings uci_setting)
 
             data.board = board;
 
-            // Does negamax with alpha beta
+            // Does search
             auto time_1 = std::chrono::high_resolution_clock::now();
 
-            i32 score = this->pvsearch<node::ROOT>(data, -eval::score::INFINITE, eval::score::INFINITE, i);
+            score = this->aspiration_window(data, i, score);
 
             auto time_2 = std::chrono::high_resolution_clock::now();
 
@@ -172,6 +175,63 @@ bool Engine::join()
     this->thread = nullptr;
 
     return true;
+};
+
+// Aspiration windows
+i32 Engine::aspiration_window(Data& data, i32 depth, i32 score_old)
+{
+    // Constants
+    constexpr i32 AW_MIN_DEPTH = 4;
+    constexpr i32 AW_MAX_REDUCTION = 3;
+    constexpr i32 AW_DELTA = 10;
+
+    // Values
+    i32 score = -eval::score::INFINITE;
+
+    i32 delta = AW_DELTA;
+
+    i32 alpha = -eval::score::INFINITE;
+    i32 beta = eval::score::INFINITE;
+
+    i32 reduction = 0;
+
+    // Sets the window if the depth is big enough
+    if (depth >= AW_MIN_DEPTH) {
+        alpha = std::max(-eval::score::INFINITE, score_old - delta);
+        beta = std::min(score_old + delta, eval::score::INFINITE);
+    }
+
+    // Rinse and repeat
+    while (true)
+    {
+        // Principle variation search
+        score = this->pvsearch<node::ROOT>(data, alpha, beta, depth - reduction);
+
+        // Aborts
+        if (!this->running.test()) {
+            break;
+        }
+
+        // Failed low
+        if (score <= alpha) {
+            beta = (alpha + beta) / 2;
+            alpha = std::max(score - delta, -eval::score::INFINITE);
+            reduction = 0;
+        }
+        // Failed high
+        else if (score >= beta) {
+            beta = std::min(score + delta, eval::score::INFINITE);
+            reduction = std::min(reduction + 1, AW_MAX_REDUCTION);
+        }
+        else {
+            break;
+        }
+
+        // Increase delta
+        delta = delta + delta / 2;
+    }
+
+    return score;
 };
 
 // Principle variation search
