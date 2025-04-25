@@ -11,6 +11,19 @@
 namespace search
 {
 
+namespace constants
+{
+
+namespace rfp
+{
+
+constexpr i32 DEPTH = 4;
+constexpr i32 MARGIN = 50;
+
+};
+
+};
+
 enum class node
 {
     ROOT,

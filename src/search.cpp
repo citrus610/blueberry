@@ -232,13 +232,17 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
     auto [table_hit, table_entry] = this->table.get(data.board.get_hash());
 
     u16 table_move = move::NONE_MOVE;
+    i32 table_eval = eval::score::NONE;
+    u8 table_bound = transposition::bound::NONE;
+    i32 table_score = eval::score::NONE;
+    i32 table_depth = 0;
 
     if (table_hit) {
         table_move = table_entry->get_move();
-
-        u8 table_bound = table_entry->get_bound();
-        i32 table_score = table_entry->get_score(data.ply);
-        i32 table_depth = table_entry->get_depth();
+        table_eval = table_entry->get_eval();
+        table_bound = table_entry->get_bound();
+        table_score = table_entry->get_score(data.ply);
+        table_depth = table_entry->get_depth();
 
         // Cut off
         if (table_depth >= depth && !is_pv) {
@@ -250,8 +254,56 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         }
     }
 
-    // In check
+    // Gets important values for search, prunings, extensions
+    // - In check
     bool is_in_check = data.board.is_in_check(data.board.get_color());
+
+    // - Gets static eval
+    i32 eval = eval::score::NONE;
+    i32 eval_raw = eval::score::NONE;
+
+    if (is_in_check) {
+        // Don't do anything if we are in check
+    }
+    else if (table_hit) {
+        // Gets the eval value from the table if possible, else gets the board's static eval
+        eval_raw = table_eval != eval::score::NONE ? table_eval : eval::get(data.board);
+        eval = eval_raw;
+        
+        // Uses the node's score as a more accurate eval value
+        if ((table_bound == transposition::bound::EXACT) ||
+            (table_bound == transposition::bound::LOWER && table_score >= beta) ||
+            (table_bound == transposition::bound::UPPER && table_score <= alpha)) {
+            eval = table_score;
+        }
+    }
+    else {
+        // Gets the board's static eval
+        eval_raw = eval::get(data.board);
+        eval = eval_raw;
+
+        // Stores this eval into the table
+        table_entry->set(
+            data.board.get_hash(),
+            move::NONE_MOVE,
+            eval::score::NONE,
+            eval_raw,
+            depth,
+            transposition::bound::NONE,
+            data.ply,
+            this->table.age
+        );
+    }
+
+    // Reverse futility pruning
+    // - If your eval is so good you can take a big hit and still get the beta cutoff, then prune
+    if (!is_pv &&
+        !is_in_check &&
+        depth <= constants::rfp::DEPTH &&
+        eval != eval::score::NONE &&
+        eval >= beta + depth * constants::rfp::MARGIN) {
+        return eval;
+    }
 
     // Check extension
     // - Increase the depth to search if we are in check
@@ -354,7 +406,16 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         best > alpha_old ? transposition::bound::EXACT :
         transposition::bound::UPPER;
     
-    table_entry->set(data.board.get_hash(), best_move, best, eval::score::NONE, depth, bound, data.ply, this->table.age);
+    table_entry->set(
+        data.board.get_hash(),
+        best_move,
+        best,
+        eval_raw,
+        depth,
+        bound,
+        data.ply,
+        this->table.age
+    );
 
     return best;
 };
@@ -384,26 +445,27 @@ i32 Engine::qsearch(Data& data, i32 alpha, i32 beta)
 
     // In check
     bool is_in_check = data.board.is_in_check(data.board.get_color());
-
-    // Gets static eval
-    i32 standpat = eval::get(data.board);
     
     // Max ply reached
     if (data.ply >= MAX_PLY) {
-        return is_in_check ? 0 : standpat;
+        return is_in_check ? 0 : eval::get(data.board);
     }
 
     // Probes table
     auto [table_hit, table_entry] = this->table.get(data.board.get_hash());
 
     u16 table_move = move::NONE_MOVE;
+    i32 table_eval = eval::score::NONE;
+    u8 table_bound = transposition::bound::NONE;
+    i32 table_score = eval::score::NONE;
+    i32 table_depth = 0;
 
     if (table_hit) {
         table_move = table_entry->get_move();
-
-        u8 table_bound = table_entry->get_bound();
-        i32 table_score = table_entry->get_score(data.ply);
-        i32 table_depth = table_entry->get_depth();
+        table_eval = table_entry->get_eval();
+        table_bound = table_entry->get_bound();
+        table_score = table_entry->get_score(data.ply);
+        table_depth = table_entry->get_depth();
 
         // Returns when score is exact or produces a cutoff in pv nodes
         if ((table_bound == transposition::bound::EXACT) ||
@@ -413,27 +475,60 @@ i32 Engine::qsearch(Data& data, i32 alpha, i32 beta)
         }
     }
 
+    // Gets static eval
+    i32 eval = eval::score::NONE;
+    i32 eval_raw = eval::score::NONE;
+
+    if (is_in_check) {
+        // Don't do anything if we are in check
+    }
+    else if (table_hit) {
+        // Gets the eval value from the table if possible, else gets the board's static eval
+        eval_raw = table_eval != eval::score::NONE ? table_eval : eval::get(data.board);
+        eval = eval_raw;
+        
+        // Uses the node's score as a more accurate eval value
+        if ((table_bound == transposition::bound::EXACT) ||
+            (table_bound == transposition::bound::LOWER && table_score >= beta) ||
+            (table_bound == transposition::bound::UPPER && table_score <= alpha)) {
+            eval = table_score;
+        }
+    }
+    else {
+        // Gets the board's static eval
+        eval_raw = eval::get(data.board);
+        eval = eval_raw;
+
+        // Stores this eval into the table
+        table_entry->set(
+            data.board.get_hash(),
+            move::NONE_MOVE,
+            eval::score::NONE,
+            eval_raw,
+            0,
+            transposition::bound::NONE,
+            data.ply,
+            this->table.age
+        );
+    }
+
     // Best score
-    i32 best;
+    i32 best = -eval::score::MATE + data.ply;
     u16 best_move = move::NONE_MOVE;
 
     i32 alpha_old = alpha;
 
-    if (is_in_check) {
-        // Possible mate here
-        best = -eval::score::MATE + data.ply;
-    }
-    else {
-        best = standpat;
+    if (!is_in_check) {
+        best = eval;
     
         // Prunes
-        if (standpat >= beta) {
-            return standpat;
+        if (eval >= beta) {
+            return eval;
         }
     
         // Updates alpha
-        if (alpha < standpat) {
-            alpha = standpat;
+        if (alpha < eval) {
+            alpha = eval;
         }
     }
 
@@ -492,7 +587,16 @@ i32 Engine::qsearch(Data& data, i32 alpha, i32 beta)
         best > alpha_old ? transposition::bound::EXACT :
         transposition::bound::UPPER;
     
-    table_entry->set(data.board.get_hash(), best_move, best, eval::score::NONE, 0, bound, data.ply, this->table.age);
+    table_entry->set(
+        data.board.get_hash(),
+        best_move,
+        best,
+        eval_raw,
+        0,
+        bound,
+        data.ply,
+        this->table.age
+    );
 
     return best;
 };
