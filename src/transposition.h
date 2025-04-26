@@ -38,7 +38,7 @@ class Entry
 {
 private:
     u16 hash = 0;
-    u16 move = move::NONE_MOVE;
+    u16 move = move::NONE;
     i16 score = 0;
     i16 eval = 0;
     u8 depth = 0;

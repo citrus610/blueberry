@@ -410,6 +410,11 @@ bool Board::is_move_quiet(u16 move)
     return move::get_type(move) != move::type::PROMOTION && (this->board[move::get_square_to(move)] == piece::NONE || move::get_type(move) == move::type::CASTLING);
 };
 
+bool Board::has_non_pawn(i8 color)
+{
+    return this->colors[this->color] ^ this->pieces[piece::type::PAWN] ^ this->pieces[piece::type::KING];
+};
+
 void Board::make(u16 move)
 {
     // Gets move data

@@ -8,8 +8,7 @@ namespace move
 
 constexpr usize MAX_MOVE = 256;
 
-constexpr u16 NONE_MOVE = 0;
-constexpr u16 NULL_MOVE = 65;
+constexpr u16 NONE = 0;
 
 namespace type
 {

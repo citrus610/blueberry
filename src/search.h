@@ -22,6 +22,16 @@ constexpr i32 MARGIN = 50;
 
 };
 
+namespace nmp
+{
+
+constexpr i32 REDUCTION = 4;
+constexpr i32 REDUCTION_EVAL_MAX = 3;
+constexpr i32 DIVISOR_DEPTH = 5;
+constexpr i32 DIVISOR_EVAL = 200;
+
+};
+
 };
 
 enum class node
@@ -43,7 +53,7 @@ struct Settings
 class PV
 {
 public:
-    u16 data[MAX_PLY] = { move::NONE_MOVE };
+    u16 data[MAX_PLY] = { move::NONE };
     i32 count = 0;
 public:
     PV();
@@ -62,6 +72,7 @@ public:
 public:
     Board board;
     i32 ply;
+    u16 moves[MAX_PLY];
 public:
     u64 nodes;
     i32 seldepth;
