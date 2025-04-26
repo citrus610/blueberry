@@ -1,6 +1,6 @@
 <div align="center">
 
-  ![Blueberry](logo.png)
+  <img src="https://github.com/citrus610/blueberry/blob/main/logo.png" width=12.5% height=12.5%>
   <h1>Blueberry</h1>
   WIP UCI chess engine
 
