@@ -354,10 +354,27 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
     auto moves = move::generate::get_legal<move::generate::type::ALL>(data.board);
     auto moves_scores = move::order::get_score(moves, data, table_move);
 
+    // Skips quiet moves
+    bool skip_quiet = false;
+
     // Iterates moves
     for (usize i = 0; i < moves.size(); ++i) {
         // Picks the move to search based on move ordering
         move::order::sort(moves, moves_scores, i);
+
+        // Skips quiet moves, we don't skip if we are in check or we are in root
+        bool is_quiet = data.board.is_move_quiet(moves[i]);
+
+        if (!is_root && !is_in_check && skip_quiet && is_quiet) {
+            continue;
+        }
+
+        // Late move pruning.
+        // - If we have seen many moves in this position already, and we are not in check, we skip the rest
+        if (best > -eval::score::MATE_FOUND &&
+            i + 1 >= (depth * depth + constants::lmp::BASE) / 2) {
+            skip_quiet = true;
+        }
 
         // Makes
         data.board.make(moves[i]);
@@ -388,8 +405,6 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         if (!this->running.test()) {
             return eval::score::DRAW;
         }
-
-        bool is_quiet = data.board.is_move_quiet(moves[i]);
 
         // Updates values
         if (score > best) {
