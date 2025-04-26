@@ -12,7 +12,7 @@ PV::PV()
 void PV::clear()
 {
     for (i32 i = 0; i < MAX_PLY; ++i) {
-        this->data[i] = move::NONE_MOVE;
+        this->data[i] = move::NONE;
     }
 
     this->count = 0;
@@ -36,7 +36,7 @@ void Data::clear()
     }
 
     for (i32 i = 0; i < MAX_PLY; ++i) {
-        this->killer_table[i] = move::NONE_MOVE;
+        this->killer_table[i] = move::NONE;
     }
 
     for (i32 p = 0; p < 12; ++p) {
@@ -46,8 +46,11 @@ void Data::clear()
     }
 
     this->board = Board();
-
     this->ply = 0;
+
+    for (i32 i = 0; i < MAX_PLY; ++i) {
+        this->moves[i] = move::NONE;
+    }
 
     this->nodes = 0;
     this->seldepth = 0;
@@ -114,7 +117,7 @@ bool Engine::search(Board uci_board, Settings uci_setting)
             auto time_2 = std::chrono::high_resolution_clock::now();
 
             // Saves pv line
-            if (data.pv_table[0].count != 0 && data.pv_table[0].data[0] != move::NONE_MOVE) {
+            if (data.pv_table[0].count != 0 && data.pv_table[0].data[0] != move::NONE) {
                 pv_history.push_back(data.pv_table[0]);
             }
 
@@ -231,7 +234,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
     // - Returns when score is exact or produces a cutoff
     auto [table_hit, table_entry] = this->table.get(data.board.get_hash());
 
-    u16 table_move = move::NONE_MOVE;
+    u16 table_move = move::NONE;
     i32 table_eval = eval::score::NONE;
     u8 table_bound = transposition::bound::NONE;
     i32 table_score = eval::score::NONE;
@@ -285,7 +288,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         // Stores this eval into the table
         table_entry->set(
             data.board.get_hash(),
-            move::NONE_MOVE,
+            move::NONE,
             eval::score::NONE,
             eval_raw,
             depth,
@@ -296,13 +299,44 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
     }
 
     // Reverse futility pruning
-    // - If your eval is so good you can take a big hit and still get the beta cutoff, then prune
+    // - If our eval is so good we can take a big hit and still get the beta cutoff, then prune
     if (!is_pv &&
         !is_in_check &&
         depth <= constants::rfp::DEPTH &&
         eval != eval::score::NONE &&
         eval >= beta + depth * constants::rfp::MARGIN) {
         return eval;
+    }
+
+    // Null move pruning
+    // - If our position is too good that giving the enemy a free move still fail high, then prune
+    if (!is_pv &&
+        !is_in_check &&
+        data.moves[data.ply - 1] != move::NONE &&
+        eval >= beta &&
+        data.board.has_non_pawn(data.board.get_color())) {
+        // Calculates reduction count based on depth and eval
+        i32 reduction =
+            constants::nmp::REDUCTION +
+            depth / constants::nmp::DIVISOR_DEPTH +
+            std::min((eval - beta) / constants::nmp::DIVISOR_EVAL, constants::nmp::REDUCTION_EVAL_MAX);
+        
+        // Makes null move
+        data.board.make_null();
+        data.moves[data.ply] = move::NONE;
+        data.ply += 1;
+
+        // Scouts
+        i32 score = -this->pvsearch<node::NORMAL>(data, -beta, -beta + 1, depth - reduction);
+
+        // Unmakes
+        data.board.unmake_null();
+        data.ply -= 1;
+
+        // Returns score if fail high, we don't return false mate score
+        if (score >= beta) {
+            return score < eval::score::MATE_FOUND ? score : beta;
+        }
     }
 
     // Check extension
@@ -312,7 +346,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
 
     // Best score
     i32 best = -eval::score::INFINITE;
-    u16 best_move = move::NONE_MOVE;
+    u16 best_move = move::NONE;
 
     i32 alpha_old = alpha;
 
@@ -327,6 +361,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
 
         // Makes
         data.board.make(moves[i]);
+        data.moves[data.ply] = moves[i];
         data.ply += 1;
 
         // Prefetch table
@@ -454,7 +489,7 @@ i32 Engine::qsearch(Data& data, i32 alpha, i32 beta)
     // Probes table
     auto [table_hit, table_entry] = this->table.get(data.board.get_hash());
 
-    u16 table_move = move::NONE_MOVE;
+    u16 table_move = move::NONE;
     i32 table_eval = eval::score::NONE;
     u8 table_bound = transposition::bound::NONE;
     i32 table_score = eval::score::NONE;
@@ -502,7 +537,7 @@ i32 Engine::qsearch(Data& data, i32 alpha, i32 beta)
         // Stores this eval into the table
         table_entry->set(
             data.board.get_hash(),
-            move::NONE_MOVE,
+            move::NONE,
             eval::score::NONE,
             eval_raw,
             0,
@@ -514,7 +549,7 @@ i32 Engine::qsearch(Data& data, i32 alpha, i32 beta)
 
     // Best score
     i32 best = -eval::score::MATE + data.ply;
-    u16 best_move = move::NONE_MOVE;
+    u16 best_move = move::NONE;
 
     i32 alpha_old = alpha;
 
