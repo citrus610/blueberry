@@ -35,7 +35,7 @@ constexpr i32 DIVISOR_EVAL = 200;
 namespace lmp
 {
 
-constexpr i32 BASE = 3;
+constexpr i32 BASE = 5;
 
 };
 

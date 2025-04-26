@@ -371,8 +371,8 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
 
         // Late move pruning.
         // - If we have seen many moves in this position already, and we are not in check, we skip the rest
-        if (best > -eval::score::MATE_FOUND &&
-            i + 1 >= (depth * depth + constants::lmp::BASE) / 2) {
+        if ((best > -eval::score::MATE_FOUND) &&
+            (i + 1 >= depth * depth + constants::lmp::BASE)) {
             skip_quiet = true;
         }
 
