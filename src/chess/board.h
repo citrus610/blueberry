@@ -61,6 +61,7 @@ public:
     bool is_drawn_insufficient();
     bool is_square_attacked(i8 square, i8 color);
     bool is_in_check(i8 color);
+    bool is_move_quiet(u16 move);
 public:
     void make(u16 move);
     void unmake(u16 move);

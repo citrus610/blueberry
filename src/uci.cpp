@@ -163,8 +163,11 @@ void print_info(i32 depth, i32 seldepth, i32 score, u64 nodes, u64 ms, u64 hashf
 
     std::cout << "seldepth " << seldepth << " ";
 
-    if (score >= eval::score::MATE_FOUND || score <= -eval::score::MATE_FOUND) {
+    if (score >= eval::score::MATE_FOUND) {
         std::cout << "score mate " << ((eval::score::MATE - score) / 2) << " ";
+    }
+    else if (score <= -eval::score::MATE_FOUND) {
+        std::cout << "score mate " << ((-eval::score::MATE - score) / 2) << " ";
     }
     else {
         std::cout << "score cp " << score << " ";

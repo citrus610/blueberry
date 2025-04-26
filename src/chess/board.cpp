@@ -405,6 +405,11 @@ bool Board::is_in_check(i8 color)
     return false;
 };
 
+bool Board::is_move_quiet(u16 move)
+{
+    return move::get_type(move) != move::type::PROMOTION && (this->board[move::get_square_to(move)] == piece::NONE || move::get_type(move) == move::type::CASTLING);
+};
+
 void Board::make(u16 move)
 {
     // Gets move data
