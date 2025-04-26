@@ -359,6 +359,9 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         // Picks the move to search based on move ordering
         move::order::sort(moves, moves_scores, i);
 
+        // Checks if move is quiet
+        bool is_quiet = data.board.is_move_quiet(moves[i]);
+
         // Makes
         data.board.make(moves[i]);
         data.moves[data.ply] = moves[i];
@@ -388,8 +391,6 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         if (!this->running.test()) {
             return eval::score::DRAW;
         }
-
-        bool is_quiet = data.board.is_move_quiet(moves[i]);
 
         // Updates values
         if (score > best) {
