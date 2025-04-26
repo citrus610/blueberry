@@ -1,5 +1,10 @@
-# blueberry
-UCI chess engine WIP
+<div align="center">
+
+  ![Blueberry](logo.png)
+  <h1>Blueberry</h1>
+  WIP UCI chess engine
+
+</div>
 
 ## Features
 - Board representation
@@ -19,6 +24,9 @@ UCI chess engine WIP
     - History heuristic
   - Extensions
     - Check extensions
+  - Pruning
+    - Reverse futility pruning
+    - Null move pruning
 - Evaluation
   - Material
   - Piece-square table
