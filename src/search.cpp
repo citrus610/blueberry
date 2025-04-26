@@ -354,7 +354,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
             return eval::score::DRAW;
         }
 
-        bool is_quiet = data.board.get_piece_at(move::get_square_to(moves[i])) == piece::NONE || move::get_type(moves[i]) == move::type::CASTLING;
+        bool is_quiet = data.board.is_move_quiet(moves[i]);
 
         // Updates values
         if (score > best) {
