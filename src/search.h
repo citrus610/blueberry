@@ -11,6 +11,27 @@
 namespace search
 {
 
+namespace constants
+{
+
+namespace aw
+{
+
+constexpr i32 DEPTH = 4;
+constexpr i32 DELTA = 25;
+
+};
+
+namespace rfp
+{
+
+constexpr i32 DEPTH = 4;
+constexpr i32 MARGIN = 50;
+
+};
+
+};
+
 enum class node
 {
     ROOT,
