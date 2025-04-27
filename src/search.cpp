@@ -298,6 +298,9 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         );
     }
 
+    // - Skips quiet
+    bool skip_quiet = false;
+
     // Reverse futility pruning
     // - If our eval is so good we can take a big hit and still get the beta cutoff, then prune
     if (!is_pv &&
@@ -361,6 +364,20 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
 
         // Checks if move is quiet
         bool is_quiet = data.board.is_move_quiet(moves[i]);
+
+        // Skips quiet moves
+        if (!is_pv && !is_in_check && skip_quiet && is_quiet) {
+            continue;
+        }
+
+        // Late move pruning
+        // - If we have seen many moves in this position already, and we are not in check, we skip the rest
+        if (!is_pv &&
+            !skip_quiet &&
+            best > -eval::score::MATE_FOUND &&
+            i + 1 >= depth * depth + constants::lmp::BASE) {
+            skip_quiet = true;
+        }
 
         // Makes
         data.board.make(moves[i]);
