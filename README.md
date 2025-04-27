@@ -27,6 +27,7 @@
   - Pruning
     - Reverse futility pruning
     - Null move pruning
+    - Late move pruning
 - Evaluation
   - Material
   - Piece-square table
