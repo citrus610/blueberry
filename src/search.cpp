@@ -52,6 +52,10 @@ void Data::clear()
         this->moves[i] = move::NONE;
     }
 
+    for (i32 i = 0; i < MAX_PLY; ++i) {
+        this->evals[i] = eval::score::NONE;
+    }
+
     this->nodes = 0;
     this->seldepth = 0;
 };
@@ -298,6 +302,21 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         );
     }
 
+    data.evals[data.ply] = eval;
+
+    // - Improving
+    bool improving = true;
+
+    if (is_root || is_in_check) {
+        improving = false;
+    }
+    else if (data.ply >= 2 && data.evals[data.ply - 2] != eval::score::NONE) {
+        improving = data.evals[data.ply] > data.evals[data.ply - 2];
+    }
+    else if (data.ply >= 4 && data.evals[data.ply - 4] != eval::score::NONE) {
+        improving = data.evals[data.ply] > data.evals[data.ply - 4];
+    }
+
     // - Skips quiet
     bool skip_quiet = false;
 
@@ -375,7 +394,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         if (!is_pv &&
             !skip_quiet &&
             best > -eval::score::MATE_FOUND &&
-            i + 1 >= depth * depth + constants::lmp::BASE) {
+            i + 1 >= (depth * depth + constants::lmp::BASE) / (2 - improving)) {
             skip_quiet = true;
         }
 
