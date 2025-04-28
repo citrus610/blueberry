@@ -376,6 +376,9 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
     auto moves = move::generate::get_legal<move::generate::type::ALL>(data.board);
     auto moves_scores = move::order::get_score(moves, data, table_move);
 
+    // Seen move count
+    i32 seen_moves = 0;
+
     // Iterates moves
     for (usize i = 0; i < moves.size(); ++i) {
         // Picks the move to search based on move ordering
@@ -389,12 +392,15 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
             continue;
         }
 
+        // Updates seen moves
+        seen_moves += 1;
+
         // Late move pruning
         // - If we have seen many moves in this position already, and we are not in check, we skip the rest
         if (!is_pv &&
             !skip_quiet &&
             best > -eval::score::MATE_FOUND &&
-            i + 1 >= (depth * depth + constants::lmp::BASE) / (2 - improving)) {
+            seen_moves >= (depth * depth + constants::lmp::BASE) / (2 - improving)) {
             skip_quiet = true;
         }
 
@@ -409,8 +415,20 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         // Principle variation search
         i32 score;
 
+        // Late move reduction
+        // - Saves search by reducing moves that are ordered closer to the end
+        // - Only re-searches if the reduced search fails high
+        if (!is_root && depth > constants::lmr::DEPTH && i > 0 && is_quiet) {
+            i32 reduction = constants::lmr::TABLE[depth][seen_moves];
+
+            // Clamps depth to avoid qsearch
+            i32 depth_reduced = std::max(depth - 1 + extension - reduction, 1);
+
+            // Scouts
+            score = -this->pvsearch<node::NORMAL>(data, -alpha - 1, -alpha, depth_reduced);
+        }
         // Scouts with null window for non pv nodes
-        if (!is_pv || i > 0) {
+        else if (!is_pv || i > 0) {
             score = -this->pvsearch<node::NORMAL>(data, -alpha - 1, -alpha, depth - 1 + extension);
         }
 
