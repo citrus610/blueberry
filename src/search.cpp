@@ -418,7 +418,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         // Late move reduction
         // - Saves search by reducing moves that are ordered closer to the end
         // - Only re-searches if the reduced search fails high
-        if (!is_pv && depth > constants::lmr::DEPTH && i > 0 && is_quiet) {
+        if (depth > constants::lmr::DEPTH && i > 0 && is_quiet) {
             i32 reduction = constants::lmr::TABLE[depth][seen_moves];
 
             // Clamps depth to avoid qsearch
