@@ -426,6 +426,11 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
 
             // Scouts
             score = -this->pvsearch<node::NORMAL>(data, -alpha - 1, -alpha, depth_reduced);
+
+            // Failed high
+            if (score > alpha && depth_reduced < depth - 1 + extension) {
+                score = -this->pvsearch<node::NORMAL>(data, -alpha - 1, -alpha, depth - 1 + extension);
+            }
         }
         // Scouts with null window for non pv nodes
         else if (!is_pv || i > 0) {
