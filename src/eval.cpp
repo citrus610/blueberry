@@ -11,6 +11,7 @@ i32 get(Board& board)
     score += eval::get_material(board);
     score += eval::get_table(board);
     score += eval::get_mobility(board);
+    score += eval::get_pawn_structure(board);
 
     // Gets midgame and engame values
     i32 midgame = score::get_midgame(score);
@@ -139,6 +140,104 @@ i32 get_mobility(Board& board)
     }
 
     return mobility[0] - mobility[1];
+};
+
+i32 get_pawn_structure(Board& board)
+{
+    i32 pawn_structure = 0;
+
+    const u64 pawns[2] = {
+        board.get_pieces(piece::type::PAWN) & board.get_colors(color::WHITE),
+        board.get_pieces(piece::type::PAWN) & board.get_colors(color::BLACK)
+    };
+
+    i32 stacked[2] = { 0, 0 };
+    i32 isolated[2] = { 0, 0 };
+    i32 passed[2] = { 0, 0 };
+
+    // Files nearby masks
+    constexpr std::array<u64, 8> FILES_NEARBY = [] {
+        std::array<u64, 8> result = { 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL };
+    
+        for (i8 file = 0; file < 8; ++file) {
+            if (file > 0) {
+                result[file] |= bitboard::FILE[file - 1];
+            }
+    
+            if (file < 7) {
+                result[file] |= bitboard::FILE[file + 1];
+            }
+        }
+    
+        return result;
+    } ();
+
+    // Pawns forward pass masks
+    constexpr std::array<std::array<u64, 64>, 2> FORWARD_PASS = [] {
+        std::array<std::array<u64, 64>, 2> result = { 0ULL };
+
+        for (i8 color = 0; color < 2; ++color) {
+            for (i8 sq = 0; sq < 64; ++sq) {
+                u64 mask = bitboard::create(sq);
+
+                if (color == color::WHITE) {
+                    mask |= attack::get_pawn_left<color::WHITE>(bitboard::create(sq));
+                    mask |= attack::get_pawn_right<color::WHITE>(bitboard::create(sq));
+
+                    mask |= mask << 8;
+                    mask |= mask << 16;
+                    mask |= mask << 32;
+                }
+                else {
+                    mask |= attack::get_pawn_left<color::BLACK>(bitboard::create(sq));
+                    mask |= attack::get_pawn_right<color::BLACK>(bitboard::create(sq));
+
+                    mask |= mask >> 8;
+                    mask |= mask >> 16;
+                    mask |= mask >> 32;
+                }
+
+                result[color][sq] = mask;
+            }
+        }
+    
+        return result;
+    } ();
+
+    // Pawns stacked and isolated
+    for (i8 color = 0; color < 2; ++color) {
+        for (i8 file = 0; file < 8; ++file) {
+            const u64 pawns_file = pawns[color] & bitboard::FILE[file];
+
+            if (pawns_file) {
+                const i32 count = bitboard::get_count(pawns_file);
+
+                stacked[color] += (count - 1) * eval::DEFAULT.pawn_stacked[file];
+                isolated[color] += (pawns[color] & FILES_NEARBY[file]) ? 0 : count * eval::DEFAULT.pawn_isolated[file];
+            }
+        }
+    }
+
+    // Pawns passed
+    for (i8 color = 0; color < 2; ++color) {
+        u64 pawns_color = pawns[color];
+
+        while (pawns_color)
+        {
+            i8 sq = bitboard::get_lsb(pawns_color);
+            pawns_color = bitboard::get_pop_lsb(pawns_color);
+
+            if ((FORWARD_PASS[color][sq] & pawns[!color]) == 0) {
+                passed[color] += eval::DEFAULT.pawn_passed[square::get_file(sq)];
+            }
+        }
+    }
+
+    pawn_structure += stacked[0] - stacked[1];
+    pawn_structure += isolated[0] - isolated[1];
+    pawn_structure += passed[0] - passed[1];
+
+    return pawn_structure;
 };
 
 };

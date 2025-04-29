@@ -53,6 +53,10 @@ struct Weight
     i32 mobility_rook[15];
     i32 mobility_queen[28];
 
+    i32 pawn_stacked[8];
+    i32 pawn_isolated[8];
+    i32 pawn_passed[8];
+
     i32 tempo;
 };
 
@@ -138,7 +142,17 @@ constexpr Weight MG = Weight {
     },
     .mobility_queen = {
         -50, -40, -25, -20, -15, -10, -5, 0, 5, 10, 10, 15, 15, 20, 20, 20, 25, 15, 15, 15, 25, 35, 35, 30, 10, 10, -20, -20
-    }
+    },
+
+    .pawn_stacked = {
+        -5, -5, -10, -10, -10, -10, -5, -5
+    },
+    .pawn_isolated = {
+        -15, -10, -5, 0, 0, -5, -10, -15
+    },
+    .pawn_passed = {
+        10, 10, 10, 10, 10, 10, 10, 10
+    },
 };
 
 constexpr Weight EG = Weight {
@@ -223,7 +237,17 @@ constexpr Weight EG = Weight {
     },
     .mobility_queen = {
         -50, -40, -25, -20, -15, -10, -5, 0, 5, 10, 10, 15, 15, 20, 20, 20, 25, 15, 15, 15, 25, 35, 35, 30, 10, 10, -20, -20
-    }
+    },
+
+    .pawn_stacked = {
+        -25, -25, -25, -20, -20, -25, -25, -25
+    },
+    .pawn_isolated = {
+        -15, -15, -15, -20, -20, -15, -15, -15
+    },
+    .pawn_passed = {
+        25, 25, 30, 35, 35, 30, 25, 25
+    },
 };
 
 constexpr Weight DEFAULT = [] {
@@ -258,6 +282,12 @@ constexpr Weight DEFAULT = [] {
         SW(mobility_queen[i], w, MG, EG);
     }
 
+    for (i32 i = 0; i < 8; ++i) {
+        SW(pawn_stacked[i], w, MG, EG);
+        SW(pawn_isolated[i], w, MG, EG);
+        SW(pawn_passed[i], w, MG, EG);
+    }
+
     w.tempo = 20;
 
     return w;
@@ -270,5 +300,7 @@ i32 get_material(Board& board);
 i32 get_table(Board& board);
 
 i32 get_mobility(Board& board);
+
+i32 get_pawn_structure(Board& board);
 
 };
