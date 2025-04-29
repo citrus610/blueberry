@@ -67,7 +67,7 @@ Engine::Engine()
 
 void Engine::init()
 {
-    this->table.init(2);
+    this->table.init(64);
 };
 
 void Engine::clear()
@@ -418,14 +418,15 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
 
         // Late move reduction
         // - Saves search by reducing moves that are ordered closer to the end
-        // - Only re-searches if the reduced search fails high
-        if (i > 0 &&
+        // - Researches if the reduced search fails high
+        if (i > 1 + is_root &&
             depth > constants::lmr::DEPTH &&
             is_quiet) {
+            // Gets reduction count
             i32 reduction = constants::lmr::TABLE[depth][seen_moves];
 
             // Clamps depth to avoid qsearch
-            i32 depth_reduced = std::max(depth_next - reduction, 1);
+            i32 depth_reduced = std::min(std::max(depth_next - reduction, 1), depth_next);
 
             // Scouts
             score = -this->pvsearch<node::NORMAL>(data, -alpha - 1, -alpha, depth_reduced);

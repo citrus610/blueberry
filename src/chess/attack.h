@@ -80,7 +80,7 @@ u64 get_queen(i8 square, u64 occupied);
 u64 get_king(i8 square);
 
 template<i8 COLOR>
-inline u64 get_pawn_left(u64 pawns)
+constexpr u64 get_pawn_left(u64 pawns)
 {
     return
         COLOR == color::WHITE ?
@@ -89,7 +89,7 @@ inline u64 get_pawn_left(u64 pawns)
 };
 
 template<i8 COLOR>
-inline u64 get_pawn_right(u64 pawns)
+constexpr u64 get_pawn_right(u64 pawns)
 {
     return
         COLOR == color::WHITE ?
