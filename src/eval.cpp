@@ -12,6 +12,30 @@ i32 get(Board& board)
     score += eval::get_table(board);
     score += eval::get_mobility(board);
 
+    // Gets midgame and engame values
+    i32 midgame = score::get_midgame(score);
+    i32 endgame = score::get_endgame(score);
+
+    // Calculates phase
+    const i32 PHASE_SCALE = 256;
+    const i32 PHASE_KNIGHT = 1;
+    const i32 PHASE_BISHOP = 1;
+    const i32 PHASE_ROOK = 2;
+    const i32 PHASE_QUEEN = 4;
+    const i32 PHASE_MAX = PHASE_KNIGHT * 4 + PHASE_BISHOP * 4 + PHASE_ROOK * 4 + PHASE_QUEEN * 2;
+
+    i32 phase = PHASE_MAX;
+
+    phase -= bitboard::get_count(board.get_pieces(piece::type::KNIGHT)) * PHASE_KNIGHT;
+    phase -= bitboard::get_count(board.get_pieces(piece::type::BISHOP)) * PHASE_BISHOP;
+    phase -= bitboard::get_count(board.get_pieces(piece::type::ROOK)) * PHASE_ROOK;
+    phase -= bitboard::get_count(board.get_pieces(piece::type::QUEEN)) * PHASE_QUEEN;
+
+    phase = (phase * PHASE_SCALE + (PHASE_MAX / 2)) / PHASE_MAX;
+
+    // Mixes midgame and endgame values
+    score = ((midgame * (PHASE_SCALE - phase)) + (endgame * phase)) / PHASE_SCALE;
+
     // Returns score based on side to move with tempo
     return (board.get_color() == color::WHITE ? score : -score) + eval::DEFAULT.tempo;
 };

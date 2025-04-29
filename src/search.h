@@ -43,12 +43,19 @@ constexpr i32 BASE = 3;
 namespace lmr
 {
 
-const auto TABLE = [] {
-    std::array<std::array<i32, move::MAX_MOVE>, MAX_PLY> table = { 0 };
+constexpr i32 DEPTH = 3;
 
-    for (i32 depth = 1; depth < MAX_PLY; ++depth) {
-        for (i32 moves = 1; moves < move::MAX_MOVE; ++moves) {
-            table[depth][moves] = i32(std::log(depth) * std::log(moves) * 0.5 + 0.5);
+const auto TABLE = [] {
+    std::array<std::array<i32, move::MAX_MOVE>, MAX_PLY> table;
+
+    for (i32 depth = 0; depth < MAX_PLY; ++depth) {
+        for (i32 moves = 0; moves < move::MAX_MOVE; ++moves) {
+            if (depth == 0 || moves == 0) {
+                table[depth][moves] = 0;
+                continue;
+            }
+
+            table[depth][moves] = i32(std::log(depth) * std::log(moves) * 0.35 + 0.6);
         }
     }
 
