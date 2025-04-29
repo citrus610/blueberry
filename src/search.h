@@ -55,7 +55,7 @@ const auto TABLE = [] {
                 continue;
             }
 
-            table[depth][moves] = i32(std::log(depth) * std::log(moves) * 0.35 + 1.0);
+            table[depth][moves] = i32(std::log(depth) * std::log(moves) * 0.35 + 0.6);
         }
     }
 

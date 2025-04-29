@@ -413,33 +413,36 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         this->table.prefetch(data.board.get_hash());
 
         // Principle variation search
-        i32 score;
+        i32 score = -eval::score::INFINITE;
+        i32 depth_next = depth - 1 + extension;
 
         // Late move reduction
         // - Saves search by reducing moves that are ordered closer to the end
         // - Only re-searches if the reduced search fails high
-        if (depth > constants::lmr::DEPTH && i > 0 && is_quiet) {
+        if (i > 0 &&
+            depth > constants::lmr::DEPTH &&
+            is_quiet) {
             i32 reduction = constants::lmr::TABLE[depth][seen_moves];
 
             // Clamps depth to avoid qsearch
-            i32 depth_reduced = std::max(depth - 1 + extension - reduction, 1);
+            i32 depth_reduced = std::max(depth_next - reduction, 1);
 
             // Scouts
             score = -this->pvsearch<node::NORMAL>(data, -alpha - 1, -alpha, depth_reduced);
 
             // Failed high
-            if (score > alpha && depth_reduced < depth - 1 + extension) {
-                score = -this->pvsearch<node::NORMAL>(data, -alpha - 1, -alpha, depth - 1 + extension);
+            if (score > alpha && depth_reduced < depth_next) {
+                score = -this->pvsearch<node::NORMAL>(data, -alpha - 1, -alpha, depth_next);
             }
         }
         // Scouts with null window for non pv nodes
         else if (!is_pv || i > 0) {
-            score = -this->pvsearch<node::NORMAL>(data, -alpha - 1, -alpha, depth - 1 + extension);
+            score = -this->pvsearch<node::NORMAL>(data, -alpha - 1, -alpha, depth_next);
         }
 
         // Searches as pv node for first child or researches after scouting
         if (is_pv && (i == 0 || score > alpha)) {
-            score = -this->pvsearch<node::PV>(data, -beta, -alpha, depth - 1 + extension);
+            score = -this->pvsearch<node::PV>(data, -beta, -alpha, depth_next);
         }
 
         // Unmakes
