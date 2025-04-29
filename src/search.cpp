@@ -52,6 +52,10 @@ void Data::clear()
         this->moves[i] = move::NONE;
     }
 
+    for (i32 i = 0; i < MAX_PLY; ++i) {
+        this->evals[i] = eval::score::NONE;
+    }
+
     this->nodes = 0;
     this->seldepth = 0;
 };
@@ -298,6 +302,21 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         );
     }
 
+    data.evals[data.ply] = eval;
+
+    // - Improving
+    bool improving = true;
+
+    if (is_root || is_in_check) {
+        improving = false;
+    }
+    else if (data.ply >= 2 && data.evals[data.ply - 2] != eval::score::NONE) {
+        improving = data.evals[data.ply] > data.evals[data.ply - 2];
+    }
+    else if (data.ply >= 4 && data.evals[data.ply - 4] != eval::score::NONE) {
+        improving = data.evals[data.ply] > data.evals[data.ply - 4];
+    }
+
     // - Skips quiet
     bool skip_quiet = false;
 
@@ -357,6 +376,9 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
     auto moves = move::generate::get_legal<move::generate::type::ALL>(data.board);
     auto moves_scores = move::order::get_score(moves, data, table_move);
 
+    // Seen move count
+    i32 seen_moves = 0;
+
     // Iterates moves
     for (usize i = 0; i < moves.size(); ++i) {
         // Picks the move to search based on move ordering
@@ -370,12 +392,15 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
             continue;
         }
 
+        // Updates seen moves
+        seen_moves += 1;
+
         // Late move pruning
         // - If we have seen many moves in this position already, and we are not in check, we skip the rest
         if (!is_pv &&
             !skip_quiet &&
             best > -eval::score::MATE_FOUND &&
-            i + 1 >= depth * depth + constants::lmp::BASE) {
+            seen_moves >= (depth * depth + constants::lmp::BASE) / (2 - improving)) {
             skip_quiet = true;
         }
 
@@ -388,16 +413,17 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         this->table.prefetch(data.board.get_hash());
 
         // Principle variation search
-        i32 score;
+        i32 score = -eval::score::INFINITE;
+        i32 depth_next = depth - 1 + extension;
 
         // Scouts with null window for non pv nodes
         if (!is_pv || i > 0) {
-            score = -this->pvsearch<node::NORMAL>(data, -alpha - 1, -alpha, depth - 1 + extension);
+            score = -this->pvsearch<node::NORMAL>(data, -alpha - 1, -alpha, depth_next);
         }
 
         // Searches as pv node for first child or researches after scouting
         if (is_pv && (i == 0 || score > alpha)) {
-            score = -this->pvsearch<node::PV>(data, -beta, -alpha, depth - 1 + extension);
+            score = -this->pvsearch<node::PV>(data, -beta, -alpha, depth_next);
         }
 
         // Unmakes

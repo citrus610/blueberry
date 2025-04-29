@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <thread>
+#include <cmath>
 
 #include "eval.h"
 #include "order.h"
@@ -36,6 +37,30 @@ namespace lmp
 {
 
 constexpr i32 BASE = 3;
+
+};
+
+namespace lmr
+{
+
+constexpr i32 DEPTH = 3;
+
+const auto TABLE = [] {
+    std::array<std::array<i32, move::MAX_MOVE>, MAX_PLY> table;
+
+    for (i32 depth = 0; depth < MAX_PLY; ++depth) {
+        for (i32 moves = 0; moves < move::MAX_MOVE; ++moves) {
+            if (depth == 0 || moves == 0) {
+                table[depth][moves] = 0;
+                continue;
+            }
+
+            table[depth][moves] = i32(std::log(depth) * std::log(moves) * 0.35 + 0.6);
+        }
+    }
+
+    return table;
+} ();
 
 };
 
@@ -80,6 +105,7 @@ public:
     Board board;
     i32 ply;
     u16 moves[MAX_PLY];
+    i32 evals[MAX_PLY];
 public:
     u64 nodes;
     i32 seldepth;

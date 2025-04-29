@@ -12,6 +12,30 @@ i32 get(Board& board)
     score += eval::get_table(board);
     score += eval::get_mobility(board);
 
+    // Gets midgame and engame values
+    i32 midgame = score::get_midgame(score);
+    i32 endgame = score::get_endgame(score);
+
+    // Calculates phase
+    const i32 PHASE_SCALE = 256;
+    const i32 PHASE_KNIGHT = 1;
+    const i32 PHASE_BISHOP = 1;
+    const i32 PHASE_ROOK = 2;
+    const i32 PHASE_QUEEN = 4;
+    const i32 PHASE_MAX = PHASE_KNIGHT * 4 + PHASE_BISHOP * 4 + PHASE_ROOK * 4 + PHASE_QUEEN * 2;
+
+    i32 phase = PHASE_MAX;
+
+    phase -= bitboard::get_count(board.get_pieces(piece::type::KNIGHT)) * PHASE_KNIGHT;
+    phase -= bitboard::get_count(board.get_pieces(piece::type::BISHOP)) * PHASE_BISHOP;
+    phase -= bitboard::get_count(board.get_pieces(piece::type::ROOK)) * PHASE_ROOK;
+    phase -= bitboard::get_count(board.get_pieces(piece::type::QUEEN)) * PHASE_QUEEN;
+
+    phase = (phase * PHASE_SCALE + (PHASE_MAX / 2)) / PHASE_MAX;
+
+    // Mixes midgame and endgame values
+    score = ((midgame * (PHASE_SCALE - phase)) + (endgame * phase)) / PHASE_SCALE;
+
     // Returns score based on side to move with tempo
     return (board.get_color() == color::WHITE ? score : -score) + eval::DEFAULT.tempo;
 };
@@ -93,29 +117,24 @@ i32 get_mobility(Board& board)
         if (piece_type == piece::type::KNIGHT) {
             u64 attack = attack::get_knight(square);
             
-            mobility[piece_color] += bitboard::get_count(attack) * eval::DEFAULT.mobility_knight;
+            mobility[piece_color] += eval::DEFAULT.mobility_knight[bitboard::get_count(attack)];
         }
         else if (piece_type == piece::type::BISHOP) {
             u64 attack = attack::get_bishop(square, occupied) & ~colors[piece_color];
 
-            mobility[piece_color] += bitboard::get_count(attack) * eval::DEFAULT.mobility_bishop;
+            mobility[piece_color] += eval::DEFAULT.mobility_bishop[bitboard::get_count(attack)];
         }
         else if (piece_type == piece::type::ROOK) {
             u64 attack = attack::get_rook(square, occupied) & ~colors[piece_color];
 
-            mobility[piece_color] += bitboard::get_count(attack) * eval::DEFAULT.mobility_rook;
+            mobility[piece_color] += eval::DEFAULT.mobility_rook[bitboard::get_count(attack)];
         }
         else if (piece_type == piece::type::QUEEN) {
             u64 attack = 0;
             attack |= attack::get_bishop(square, occupied) & ~colors[piece_color];
             attack |= attack::get_rook(square, occupied) & ~colors[piece_color];
 
-            mobility[piece_color] += bitboard::get_count(attack) * eval::DEFAULT.mobility_queen;
-        }
-        else if (piece_type == piece::type::KING) {
-            u64 attack = attack::get_king(square) & ~colors[piece_color];
-
-            mobility[piece_color] += bitboard::get_count(attack) * eval::DEFAULT.mobility_king;
+            mobility[piece_color] += eval::DEFAULT.mobility_queen[bitboard::get_count(attack)];
         }
     }
 
