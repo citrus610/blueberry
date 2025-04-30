@@ -8,6 +8,7 @@
 #include "order.h"
 #include "timer.h"
 #include "transposition.h"
+#include "history.h"
 
 namespace search
 {
@@ -55,7 +56,7 @@ const auto TABLE = [] {
                 continue;
             }
 
-            table[depth][moves] = i32(std::log(depth) * std::log(moves) * 0.35 + 0.6);
+            table[depth][moves] = static_cast<i32>(std::log(depth) * std::log(moves) * 0.35 + 0.75);
         }
     }
 
@@ -99,8 +100,8 @@ class Data
 public:
     PV pv_table[MAX_PLY];
 public:
-    u16 killer_table[MAX_PLY];
-    i32 history_table[12][64];
+    u16 killer[MAX_PLY];
+    history::Table history;
 public:
     Board board;
     i32 ply;

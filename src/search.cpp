@@ -36,14 +36,10 @@ void Data::clear()
     }
 
     for (i32 i = 0; i < MAX_PLY; ++i) {
-        this->killer_table[i] = move::NONE;
+        this->killer[i] = move::NONE;
     }
 
-    for (i32 p = 0; p < 12; ++p) {
-        for (i32 sq = 0; sq < 64; ++sq) {
-            this->history_table[p][sq] = 0;
-        }
-    }
+    this->history.clear();
 
     this->board = Board();
     this->ply = 0;
@@ -67,7 +63,7 @@ Engine::Engine()
 
 void Engine::init()
 {
-    this->table.init(2);
+    this->table.init(64);
 };
 
 void Engine::clear()
@@ -320,6 +316,9 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
     // - Skips quiet
     bool skip_quiet = false;
 
+    // - Clears next killer
+    data.killer[data.ply + 1] = move::NONE;
+
     // Reverse futility pruning
     // - If our eval is so good we can take a big hit and still get the beta cutoff, then prune
     if (!is_pv &&
@@ -443,14 +442,6 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
             if (score > alpha) {
                 alpha = score;
     
-                // Stores history moves
-                if (is_quiet) {
-                    i8 piece = data.board.get_piece_at(move::get_square_from(moves[i]));
-                    i8 to = move::get_square_to(moves[i]);
-    
-                    data.history_table[piece][to] += depth;
-                }
-    
                 // Updates pv line
                 data.pv_table[data.ply].update(moves[i], data.pv_table[data.ply + 1]);
             }
@@ -459,13 +450,19 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         // Fail-soft cutoff
         // - This move is too good, our enemy won't let us do this
         if (score >= beta) {
-            // Stores killer moves
             if (is_quiet) {
-                data.killer_table[data.ply] = moves[i];
+                // Stores killer moves
+                data.killer[data.ply] = moves[i];
+
+                // Updates history
+                data.history.update(data.board, moves[i], depth, true);
             }
 
             break;
         }
+
+        // Updates history for non-cutoff moves
+        data.history.update(data.board, moves[i], depth, false);
     }
 
     // Checks stalemate or checkmate
