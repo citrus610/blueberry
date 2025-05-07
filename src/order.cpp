@@ -17,9 +17,14 @@ arrayvec<i32, move::MAX_MOVE> get_score(const arrayvec<u16, move::MAX_MOVE>& mov
 
         // MVV LVA
         i8 piece = data.board.get_piece_at(move::get_square_from(moves[i]));
-        i8 captured = data.board.get_piece_type_at(move::get_square_to(moves[i]));
 
-        if (move::get_type(moves[i]) != move::type::CASTLING && captured != piece::NONE) {
+        if (!data.board.is_move_quiet(moves[i])) {
+            i8 captured = move::get_type(moves[i]) == move::type::ENPASSANT ? piece::type::PAWN : data.board.get_piece_type_at(move::get_square_to(moves[i]));
+
+            if (captured == piece::NONE) {
+                captured = piece::type::PAWN;
+            }
+
             scores.add(move::order::MVV_LVA[captured][piece::get_type(piece)] + move::order::MVV_LVA_SCORE);
             continue;
         }

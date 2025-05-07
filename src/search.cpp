@@ -320,6 +320,12 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
     // - Skips quiet
     bool skip_quiet = false;
 
+    // Internal iterative reductions
+    if (!table_hit &&
+        depth > 3) {
+        depth -= 1;
+    }
+
     // Reverse futility pruning
     // - If our eval is so good we can take a big hit and still get the beta cutoff, then prune
     if (!is_pv &&
@@ -416,28 +422,8 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         i32 score = -eval::score::INFINITE;
         i32 depth_next = depth - 1 + extension;
 
-        // Late move reduction
-        // - Saves search by reducing moves that are ordered closer to the end
-        // - Researches if the reduced search fails high
-        if (i > 1 + is_root &&
-            depth > constants::lmr::DEPTH &&
-            is_quiet) {
-            // Gets reduction count
-            i32 reduction = constants::lmr::TABLE[depth][seen_moves];
-
-            // Clamps depth to avoid qsearch
-            i32 depth_reduced = std::min(std::max(depth_next - reduction, 1), depth_next);
-
-            // Scouts
-            score = -this->pvsearch<node::NORMAL>(data, -alpha - 1, -alpha, depth_reduced);
-
-            // Failed high
-            if (score > alpha && depth_reduced < depth_next) {
-                score = -this->pvsearch<node::NORMAL>(data, -alpha - 1, -alpha, depth_next);
-            }
-        }
         // Scouts with null window for non pv nodes
-        else if (!is_pv || i > 0) {
+        if (!is_pv || i > 0) {
             score = -this->pvsearch<node::NORMAL>(data, -alpha - 1, -alpha, depth_next);
         }
 

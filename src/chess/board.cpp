@@ -407,7 +407,9 @@ bool Board::is_in_check(i8 color)
 
 bool Board::is_move_quiet(u16 move)
 {
-    return move::get_type(move) != move::type::PROMOTION && (this->board[move::get_square_to(move)] == piece::NONE || move::get_type(move) == move::type::CASTLING);
+    return
+        (move::get_type(move) == move::type::CASTLING) ||
+        (move::get_type(move) == move::type::NORMAL && this->board[move::get_square_to(move)] == piece::NONE);
 };
 
 bool Board::has_non_pawn(i8 color)
