@@ -101,6 +101,9 @@ bool Engine::search(Board uci_board, Settings uci_setting)
         // Storing best pv lines found in each iteration
         std::vector<PV> pv_history = {};
 
+        // Search score
+        i32 score = -eval::score::INFINITE;
+
         // Iterative deepening
         for (i32 i = 1; i < settings.depth; ++i) {
             // Inits search data
@@ -112,7 +115,7 @@ bool Engine::search(Board uci_board, Settings uci_setting)
             // Principle variation search
             auto time_1 = std::chrono::high_resolution_clock::now();
 
-            i32 score = this->pvsearch<true>(data, -eval::score::INFINITE, eval::score::INFINITE, i);
+            score = this->aspiration_window(data, i, score);
 
             auto time_2 = std::chrono::high_resolution_clock::now();
 
@@ -175,6 +178,54 @@ bool Engine::join()
     this->thread = nullptr;
 
     return true;
+};
+
+// Aspiration windows
+i32 Engine::aspiration_window(Data& data, i32 depth, i32 score_old)
+{
+    // Values
+    i32 score = -eval::score::INFINITE;
+
+    i32 delta = params::aw::DELTA;
+
+    i32 alpha = -eval::score::INFINITE;
+    i32 beta = eval::score::INFINITE;
+
+    // Sets the window if the depth is big enough
+    if (depth >= params::aw::DEPTH) {
+        alpha = std::max(score_old - delta, -eval::score::INFINITE);
+        beta = std::min(score_old + delta, eval::score::INFINITE);
+    }
+
+    // Loops
+    while (true)
+    {
+        // Principle variation search
+        score = this->pvsearch<true>(data, alpha, beta, depth);
+
+        // Aborts
+        if (!this->running.test()) {
+            break;
+        }
+
+        // Failed low
+        if (score <= alpha) {
+            beta = (alpha + beta) / 2;
+            alpha = std::max(score - delta, -eval::score::INFINITE);
+        }
+        // Failed high
+        else if (score >= beta) {
+            beta = std::min(score + delta, eval::score::INFINITE);
+        }
+        else {
+            break;
+        }
+
+        // Increase delta
+        delta = delta + delta / 2;
+    }
+
+    return score;
 };
 
 // Principle variation search

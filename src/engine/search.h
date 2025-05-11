@@ -13,6 +13,19 @@
 namespace search
 {
 
+namespace params
+{
+
+namespace aw
+{
+
+constexpr i32 DEPTH = 4;
+constexpr i32 DELTA = 25;
+
+};
+
+};
+
 struct Settings
 {
     i32 depth;
@@ -72,6 +85,7 @@ public:
     bool stop();
     bool join();
 public:
+    i32 aspiration_window(Data& data, i32 depth, i32 score_old);
     template <bool PV>
     i32 pvsearch(Data& data, i32 alpha, i32 beta, i32 depth);
     template <bool PV>
