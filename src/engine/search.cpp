@@ -433,6 +433,8 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
 
     i32 legals = 0;
 
+    bool skip_quiets = false;
+
     // Iterates moves
     for (usize i = 0; i < moves.size(); ++i) {
         // Picks the move to search based on move ordering
@@ -441,8 +443,21 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         // Checks if move is quiet
         bool is_quiet = data.board.is_move_quiet(moves[i]);
 
+        // Skip quiets
+        if (skip_quiets && is_quiet) {
+            continue;
+        }
+
         // Updates moves count
         legals += 1;
+
+        // Late move pruning
+        if (!is_root &&
+            !skip_quiets &&
+            best > -eval::score::MATE_FOUND &&
+            legals >= depth * depth + params::lmp::BASE) {
+            skip_quiets = true;
+        }
 
         // Makes
         data.board.make(moves[i]);
