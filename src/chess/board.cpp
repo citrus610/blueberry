@@ -430,7 +430,7 @@ bool Board::is_move_quiet(u16 move)
 
 bool Board::has_non_pawn(i8 color)
 {
-    return this->colors[this->color] ^ this->pieces[piece::type::PAWN] ^ this->pieces[piece::type::KING];
+    return this->colors[this->color] & ~(this->pieces[piece::type::PAWN] | this->pieces[piece::type::KING]);
 };
 
 void Board::make(u16 move)

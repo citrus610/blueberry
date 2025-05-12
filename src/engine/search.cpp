@@ -358,6 +358,37 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         return eval;
     }
 
+    // Null move pruning
+    if (!PV &&
+        !is_in_check &&
+        data.moves[data.ply - 1] != move::NONE &&
+        eval >= beta &&
+        depth >= params::nmp::DEPTH &&
+        data.board.has_non_pawn(data.board.get_color())) {
+        // Calculates reduction count based on depth and eval
+        i32 reduction =
+            params::nmp::REDUCTION +
+            depth / params::nmp::DIVISOR_DEPTH +
+            std::min((eval - beta) / params::nmp::DIVISOR_EVAL, params::nmp::REDUCTION_EVAL_MAX);
+        
+        // Makes null move
+        data.board.make_null();
+        data.moves[data.ply] = move::NONE;
+        data.ply += 1;
+
+        // Scouts
+        i32 score = -this->pvsearch<false>(data, -beta, -beta + 1, depth - reduction);
+
+        // Unmakes
+        data.board.unmake_null();
+        data.ply -= 1;
+
+        // Returns score if fail high, we don't return false mate score
+        if (score >= beta) {
+            return score < eval::score::MATE_FOUND ? score : beta;
+        }
+    }
+
     // Check extension
     i32 extension = is_in_check;
 
