@@ -3,6 +3,7 @@
 int main()
 {
     chess::init();
+    search::init();
 
     auto board = Board();
     auto settings = search::Settings();

@@ -10,10 +10,7 @@
 #include "timer.h"
 #include "table.h"
 
-namespace search
-{
-
-namespace params
+namespace search::params
 {
 
 namespace aw
@@ -43,7 +40,19 @@ constexpr i32 DIVISOR_EVAL = 200;
 
 };
 
+namespace lmr
+{
+
+constexpr i32 DEPTH = 3;
+
 };
+
+};
+
+namespace search
+{
+
+void init();
 
 struct Settings
 {

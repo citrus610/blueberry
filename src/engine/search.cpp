@@ -1,8 +1,35 @@
 #include "search.h"
 #include "uci.h"
 
+namespace search::params
+{
+
+namespace lmr
+{
+
+i32 TABLE[MAX_PLY][move::MAX];
+
+};
+
+};
+
 namespace search
 {
+
+void init()
+{
+    // Late move reduction table
+    for (i32 i = 0; i < MAX_PLY; ++i) {
+        for (i32 k = 0; k < move::MAX; ++k) {
+            if (i == 0 || k == 0) {
+                params::lmr::TABLE[i][k] = 0;
+                continue;
+            }
+
+            params::lmr::TABLE[i][k] = i32(std::log(i) * std::log(k) * 0.35 + 0.8);
+        }
+    }
+};
 
 PV::PV()
 {
@@ -404,6 +431,8 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
 
     auto quiets = arrayvec<u16, move::MAX>();
 
+    i32 legals = 0;
+
     // Iterates moves
     for (usize i = 0; i < moves.size(); ++i) {
         // Picks the move to search based on move ordering
@@ -411,6 +440,9 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
 
         // Checks if move is quiet
         bool is_quiet = data.board.is_move_quiet(moves[i]);
+
+        // Updates moves count
+        legals += 1;
 
         // Makes
         data.board.make(moves[i]);
@@ -421,8 +453,26 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         i32 score = -eval::score::INFINITE;
         i32 depth_next = depth - 1 + extension;
 
+        // Late moves reduction
+        if (legals > 1 + is_root * 2 &&
+            depth >= params::lmr::DEPTH &&
+            is_quiet) {
+            // Gets reduction count
+            i32 reduction = params::lmr::TABLE[depth][legals];
+
+            // Clamps depth to avoid qsearch
+            i32 depth_reduced = std::clamp(depth_next - reduction, 1, depth_next + 1);
+
+            // Scouts
+            score = -this->pvsearch<false>(data, -alpha - 1, -alpha, depth_reduced);
+
+            // Failed high
+            if (score > alpha && depth_reduced < depth_next) {
+                score = -this->pvsearch<false>(data, -alpha - 1, -alpha, depth_next);
+            }
+        }
         // Scouts with null window for non pv nodes
-        if (!PV || i > 0) {
+        else if (!PV || i > 0) {
             score = -this->pvsearch<false>(data, -alpha - 1, -alpha, depth_next);
         }
 
