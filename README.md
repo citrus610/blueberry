@@ -12,6 +12,7 @@
   - Fancy magic bitboard
 - Search
   - Iterative deepening
+  - Aspiration windows
   - Principle variation search
   - Quiescence search
     - Check evasion
@@ -28,10 +29,12 @@
     - Reverse futility pruning
     - Null move pruning
     - Late move pruning
+  - Reduction
+    - Late move reduction
 - Evaluation
   - Material
   - Piece-square table
   - Mobility
 - Time management
-  - Stops after an iteration if we exceed a soft limit
-  - Aborts after exceeding 50% of remaining time
+  - Soft limit 2% remaining + 50% increment
+  - Hard limit 50% remaining
