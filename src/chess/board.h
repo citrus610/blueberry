@@ -56,6 +56,7 @@ public:
     u64 get_hash();
     std::string get_fen();
 public:
+    bool is_drawn();
     bool is_drawn_repitition();
     bool is_drawn_fifty_move();
     bool is_drawn_insufficient();

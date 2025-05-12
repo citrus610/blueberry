@@ -261,7 +261,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
     // Early stop conditions
     if (!is_root) {
         // Checks drawn
-        if (data.board.is_drawn_repitition() || data.board.is_drawn_fifty_move() || data.board.is_drawn_insufficient()) {
+        if (data.board.is_drawn()) {
             return i32(data.nodes & 0b10) - 1;
         }
 
@@ -349,6 +349,18 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
 
     data.evals[data.ply] = eval;
 
+    // Reverse futility pruning
+    if (!PV &&
+        !is_in_check &&
+        depth <= params::rfp::DEPTH &&
+        eval != eval::score::NONE &&
+        eval >= beta + depth * params::rfp::MARGIN) {
+        return eval;
+    }
+
+    // Check extension
+    i32 extension = is_in_check;
+
     // Best score
     i32 best = -eval::score::INFINITE;
     u16 best_move = move::NONE;
@@ -376,7 +388,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
 
         // Principle variation search
         i32 score = -eval::score::INFINITE;
-        i32 depth_next = depth - 1;
+        i32 depth_next = depth - 1 + extension;
 
         // Scouts with null window for non pv nodes
         if (!PV || i > 0) {
@@ -487,6 +499,11 @@ i32 Engine::qsearch(Data& data, i32 alpha, i32 beta)
     data.pvs[data.ply].count = 0;
     data.nodes += 1;
     data.seldepth = std::max(data.seldepth, data.ply);
+
+    // Checks drawn
+    if (data.board.is_drawn()) {
+        return i32(data.nodes & 0b10) - 1;
+    }
 
     // In check
     bool is_in_check = data.board.is_in_check(data.board.get_color());

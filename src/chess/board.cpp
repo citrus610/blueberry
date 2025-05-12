@@ -1,4 +1,5 @@
 #include "board.h"
+#include "movegen.h"
 
 Board::Board(const std::string& fen)
 {
@@ -285,6 +286,11 @@ std::string Board::get_fen()
     return fen;
 };
 
+bool Board::is_drawn()
+{
+    return this->is_drawn_insufficient() || this->is_drawn_repitition() || this->is_drawn_fifty_move();
+};
+
 bool Board::is_drawn_repitition()
 {
     i32 count = 0;
@@ -305,7 +311,17 @@ bool Board::is_drawn_repitition()
 
 bool Board::is_drawn_fifty_move()
 {
-    return this->halfmove >= 100;
+    if (this->halfmove < 100) {
+        return false;
+    }
+
+    if (!this->is_in_check(this->color)) {
+        return true;
+    }
+
+    auto moves = move::generate::get_legal<move::generate::type::ALL>(*this);
+
+    return moves.size() > 0;
 };
 
 bool Board::is_drawn_insufficient()
