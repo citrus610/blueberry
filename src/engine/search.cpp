@@ -336,9 +336,6 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
     // Resets killer moves
     data.killers[data.ply + 1] = move::NONE;
 
-    // Improving
-    // bool is_improving = false;
-
     // Gets static eval
     i32 eval = eval::score::NONE;
     i32 eval_static = eval::score::NONE;
@@ -382,13 +379,10 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         );
     }
 
-    // Improving
-    // if (data.ply >= 2 && data.evals[data.ply - 2] != eval::score::NONE) {
-    //     is_improving = data.evals[data.ply] > data.evals[data.ply - 2];
-    // }
-    // else if (data.ply >= 4 && data.evals[data.ply - 4] != eval::score::NONE) {
-    //     is_improving = data.evals[data.ply] > data.evals[data.ply - 2];
-    // }
+    // Internal iterative reduction
+    if ((!table_hit || table_depth + 4 < depth) && depth >= 4) {
+        depth -= 1;
+    }
 
     // Reverse futility pruning
     if (!PV &&
