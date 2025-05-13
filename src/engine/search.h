@@ -47,6 +47,15 @@ constexpr i32 BASE = 3;
 
 };
 
+namespace fp
+{
+
+constexpr i32 BASE = 50;
+constexpr i32 COEF = 50;
+constexpr i32 DEPTH = 10;
+
+};
+
 namespace lmr
 {
 

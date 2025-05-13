@@ -376,6 +376,11 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
 
     data.evals[data.ply] = eval;
 
+    // Internal iterative reduction
+    // if (!table_hit && depth >= 4) {
+    //     depth -= 1;
+    // }
+
     // Reverse futility pruning
     if (!PV &&
         !is_in_check &&
@@ -451,12 +456,25 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         // Updates moves count
         legals += 1;
 
-        // Late move pruning
-        if (!is_root &&
-            !skip_quiets &&
-            best > -eval::score::MATE_FOUND &&
-            legals >= depth * depth + params::lmp::BASE) {
-            skip_quiets = true;
+        // Pruning
+        if (!is_root && best > -eval::score::MATE_FOUND) {
+            // Late move pruning
+            if (!skip_quiets &&
+                legals >= depth * depth + params::lmp::BASE) {
+                skip_quiets = true;
+            }
+
+            // Futility pruning
+            i32 lmr_reduction = params::lmr::TABLE[depth][legals];
+            i32 lmr_depth = std::max(0, depth - lmr_reduction);
+
+            if (!skip_quiets &&
+                !is_in_check &&
+                is_quiet &&
+                lmr_depth <= params::fp::DEPTH &&
+                eval + params::fp::BASE + lmr_depth * params::fp::COEF <= alpha) {
+                skip_quiets = true;
+            }
         }
 
         // Makes
