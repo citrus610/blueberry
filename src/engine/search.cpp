@@ -336,6 +336,9 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
     // Resets killer moves
     data.killers[data.ply + 1] = move::NONE;
 
+    // Improving
+    // bool is_improving = false;
+
     // Gets static eval
     i32 eval = eval::score::NONE;
     i32 eval_static = eval::score::NONE;
@@ -343,6 +346,8 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
     if (is_in_check) {
         // Don't do anything if we are in check
         data.evals[data.ply] = eval::score::NONE;
+
+        goto loop;
     }
     else if (table_hit) {
         // Gets the eval value from the table if possible, else gets the board's static eval
@@ -377,9 +382,16 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         );
     }
 
+    // Improving
+    // if (data.ply >= 2 && data.evals[data.ply - 2] != eval::score::NONE) {
+    //     is_improving = data.evals[data.ply] > data.evals[data.ply - 2];
+    // }
+    // else if (data.ply >= 4 && data.evals[data.ply - 4] != eval::score::NONE) {
+    //     is_improving = data.evals[data.ply] > data.evals[data.ply - 2];
+    // }
+
     // Reverse futility pruning
     if (!PV &&
-        !is_in_check &&
         depth <= params::rfp::DEPTH &&
         eval != eval::score::NONE &&
         eval >= beta + depth * params::rfp::MARGIN) {
@@ -388,7 +400,6 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
 
     // Null move pruning
     if (!PV &&
-        !is_in_check &&
         data.moves[data.ply - 1] != move::NONE &&
         eval >= beta &&
         depth >= params::nmp::DEPTH &&
@@ -416,6 +427,9 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
             return score < eval::score::MATE_FOUND ? score : beta;
         }
     }
+
+    // Moves loop
+    loop:
 
     // Check extension
     i32 extension = is_in_check;
