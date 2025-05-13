@@ -29,6 +29,7 @@
     - Reverse futility pruning
     - Null move pruning
     - Late move pruning
+    - Futility pruning
   - Reduction
     - Late move reduction
 - Evaluation
