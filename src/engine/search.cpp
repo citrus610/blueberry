@@ -342,11 +342,13 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
 
     if (is_in_check) {
         // Don't do anything if we are in check
+        data.evals[data.ply] = eval::score::NONE;
     }
     else if (table_hit) {
         // Gets the eval value from the table if possible, else gets the board's static eval
         eval_static = table_eval != eval::score::NONE ? table_eval : eval::get(data.board);
         eval = eval_static;
+        data.evals[data.ply] = eval;
         
         // Uses the node's score as a more accurate eval value
         if ((table_bound == transposition::bound::EXACT) ||
@@ -359,6 +361,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         // Gets the board's static eval
         eval_static = eval::get(data.board);
         eval = eval_static;
+        data.evals[data.ply] = eval;
 
         // Stores this eval into the table
         table_entry->set(
@@ -373,13 +376,6 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
             data.ply
         );
     }
-
-    data.evals[data.ply] = eval;
-
-    // Internal iterative reduction
-    // if (!table_hit && depth >= 4) {
-    //     depth -= 1;
-    // }
 
     // Reverse futility pruning
     if (!PV &&
