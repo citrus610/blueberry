@@ -377,19 +377,6 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         );
     }
 
-    // Improving
-    bool is_improving = true;
-
-    if (is_in_check) {
-        is_improving = false;
-    }
-    else if (data.ply >= 2 && data.evals[data.ply - 2] != eval::score::NONE) {
-        is_improving = data.evals[data.ply] > data.evals[data.ply - 2];
-    }
-    else if (data.ply >= 4 && data.evals[data.ply - 4] != eval::score::NONE) {
-        is_improving = data.evals[data.ply] > data.evals[data.ply - 4];
-    }
-
     // Reverse futility pruning
     if (!PV &&
         !is_in_check &&
@@ -469,7 +456,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         if (!is_root && best > -eval::score::MATE_FOUND) {
             // Late move pruning
             if (!skip_quiets &&
-                legals >= (depth * depth + params::lmp::BASE) / (2 - is_improving)) {
+                legals >= depth * depth + params::lmp::BASE) {
                 skip_quiets = true;
             }
 
