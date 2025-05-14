@@ -42,6 +42,6 @@
   - Hard limit 50% remaining
 
 ## Thanks
-People in the MinusKelvin & Engine Programming discord server for helping me, they are very cool ❤️
-
-Chess programming wiki for its resources
+- People in the MinusKelvin & Engine Programming discord server for helping me, they are very cool ❤️
+- Disservin's [chess-library](https://github.com/Disservin/chess-library) for helping understand move generation
+- Chess programming wiki for its resources
