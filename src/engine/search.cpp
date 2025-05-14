@@ -736,12 +736,18 @@ i32 Engine::qsearch(Data& data, i32 alpha, i32 beta)
         // Picks the move to search based on move ordering
         move::order::sort(moves, moves_scores, i);
 
-        // Futility pruning
+        // Pruning
         if (!is_in_check && best > -eval::score::MATE_FOUND) {
+            // Futility pruning
             i32 futility = data.evals[data.ply] + params::fp::QS_MARGIN;
 
             if (futility <= alpha && !eval::is_see(data.board, moves[i], 1)) {
                 best = std::max(best, futility);
+                continue;
+            }
+
+            // SEE pruning
+            if (!eval::is_see(data.board, moves[i], params::see::QS_MARGIN)) {
                 continue;
             }
         }

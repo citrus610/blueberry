@@ -145,12 +145,6 @@ i32 get_mobility(Board& board)
 // Copied from Weiss
 bool is_see(Board& board, u16 move, i32 threshold)
 {
-    // SEE piece values
-    constexpr i32 VALUE[12] = {
-        100, 320, 330, 500, 900, 100000,
-        100, 320, 330, 500, 900, 100000
-    };
-
     // If move is special, then we're good
     if (move::get_type(move) != move::type::NORMAL) {
         return true;
@@ -165,14 +159,14 @@ bool is_see(Board& board, u16 move, i32 threshold)
     assert(piece_to != piece::NONE);
 
     // If we still lose after making the capture, then stop
-    i32 value = VALUE[piece_to] - threshold;
+    i32 value = SEE_VALUE[piece_to] - threshold;
 
     if (value < 0) {
         return false;
     }
 
     // If we still win after losing the piece, then stop
-    value -= VALUE[piece_from];
+    value -= SEE_VALUE[piece_from];
 
     if (value > 0) {
         return true;
@@ -211,7 +205,7 @@ bool is_see(Board& board, u16 move, i32 threshold)
 
         // Flips side to move
         color = !color;
-        value = -value - 1 - VALUE[pt];
+        value = -value - 1 - SEE_VALUE[pt];
 
         // Negamax
         if (value >= 0) {

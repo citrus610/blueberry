@@ -15,54 +15,46 @@ namespace search::params
 
 namespace aw
 {
-
-constexpr i32 DEPTH = 4;
-constexpr i32 DELTA = 25;
-
+    constexpr i32 DEPTH = 4;
+    constexpr i32 DELTA = 25;
 };
 
 namespace rfp
 {
-
-constexpr i32 DEPTH = 4;
-constexpr i32 MARGIN = 50;
-
+    constexpr i32 DEPTH = 4;
+    constexpr i32 MARGIN = 50;
 };
 
 namespace nmp
 {
-
-constexpr i32 DEPTH = 3;
-constexpr i32 REDUCTION = 4;
-constexpr i32 REDUCTION_EVAL_MAX = 3;
-constexpr i32 DIVISOR_DEPTH = 5;
-constexpr i32 DIVISOR_EVAL = 200;
-
+    constexpr i32 DEPTH = 3;
+    constexpr i32 REDUCTION = 4;
+    constexpr i32 REDUCTION_EVAL_MAX = 3;
+    constexpr i32 DIVISOR_DEPTH = 5;
+    constexpr i32 DIVISOR_EVAL = 200;
 };
 
 namespace lmp
 {
-
-constexpr i32 BASE = 3;
-
+    constexpr i32 BASE = 3;
 };
 
 namespace fp
 {
-
-constexpr i32 BASE = 50;
-constexpr i32 COEF = 50;
-constexpr i32 DEPTH = 10;
-
-constexpr i32 QS_MARGIN = 150;
-
+    constexpr i32 BASE = 50;
+    constexpr i32 COEF = 50;
+    constexpr i32 DEPTH = 10;
+    constexpr i32 QS_MARGIN = 150;
 };
 
 namespace lmr
 {
+    constexpr i32 DEPTH = 3;
+};
 
-constexpr i32 DEPTH = 3;
-
+namespace see
+{
+    constexpr i32 QS_MARGIN = -50;
 };
 
 };

@@ -42,6 +42,7 @@ arrayvec<i32, move::MAX> get_score(const arrayvec<u16, move::MAX>& moves, search
                 captured = piece::type::PAWN;
             }
 
+            // MVV LVA
             scores.add(MVV_LVA[captured][piece::get_type(piece)] + MVV_LVA_SCORE);
             continue;
         }

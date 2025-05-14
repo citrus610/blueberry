@@ -37,6 +37,12 @@ namespace eval
 #define S(a, b) score::create(a, b)
 #define SW(p, w, mg, eg) w.p = score::create(mg.p, eg.p)
 
+// SEE piece values
+constexpr i32 SEE_VALUE[12] = {
+    100, 320, 330, 500, 900, 100000,
+    100, 320, 330, 500, 900, 100000
+};
+
 struct Weight
 {
     i32 material_pawn;
