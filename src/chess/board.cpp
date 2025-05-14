@@ -204,10 +204,8 @@ i32 Board::get_ply()
     return this->ply;
 };
 
-u64 Board::get_square_attacker(i8 square)
+u64 Board::get_square_attacker(i8 square, u64 occupied)
 {
-    u64 occupied = this->get_occupied();
-
     return
         (attack::get_pawn(square, color::WHITE) & this->colors[color::BLACK] & this->pieces[piece::type::PAWN]) |
         (attack::get_pawn(square, color::BLACK) & this->colors[color::WHITE] & this->pieces[piece::type::PAWN]) |

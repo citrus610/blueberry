@@ -52,7 +52,7 @@ public:
     i32 get_halfmove_count();
     i32 get_fullmove_count();
     i32 get_ply();
-    u64 get_square_attacker(i8 square);
+    u64 get_square_attacker(i8 square, u64 occupied);
     u64 get_hash();
     std::string get_fen();
 public:

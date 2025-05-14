@@ -54,6 +54,8 @@ constexpr i32 BASE = 50;
 constexpr i32 COEF = 50;
 constexpr i32 DEPTH = 10;
 
+constexpr i32 QS_MARGIN = 150;
+
 };
 
 namespace lmr

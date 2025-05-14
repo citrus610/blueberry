@@ -271,4 +271,6 @@ i32 get_table(Board& board);
 
 i32 get_mobility(Board& board);
 
+bool is_see(Board& board, u16 move, i32 threshold);
+
 };

@@ -665,11 +665,13 @@ i32 Engine::qsearch(Data& data, i32 alpha, i32 beta)
 
     if (is_in_check) {
         // Don't do anything if we are in check
+        data.evals[data.ply] = eval::score::NONE;
     }
     else if (table_hit) {
         // Gets the eval value from the table if possible, else gets the board's static eval
         eval_static = table_eval != eval::score::NONE ? table_eval : eval::get(data.board);
         eval = eval_static;
+        data.evals[data.ply] = eval;
         
         // Uses the node's score as a more accurate eval value
         if (table_score != eval::score::NONE) {
@@ -684,6 +686,7 @@ i32 Engine::qsearch(Data& data, i32 alpha, i32 beta)
         // Gets the board's static eval
         eval_static = eval::get(data.board);
         eval = eval_static;
+        data.evals[data.ply] = eval;
 
         // Stores this eval into the table
         table_entry->set(
@@ -732,6 +735,16 @@ i32 Engine::qsearch(Data& data, i32 alpha, i32 beta)
     for (usize i = 0; i < moves.size(); ++i) {
         // Picks the move to search based on move ordering
         move::order::sort(moves, moves_scores, i);
+
+        // Futility pruning
+        if (!is_in_check && best > -eval::score::MATE_FOUND) {
+            i32 futility = data.evals[data.ply] + params::fp::QS_MARGIN;
+
+            if (futility <= alpha && !eval::is_see(data.board, moves[i], 1)) {
+                best = std::max(best, futility);
+                continue;
+            }
+        }
 
         // Makes
         data.board.make(moves[i]);
