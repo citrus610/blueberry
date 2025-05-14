@@ -32,6 +32,7 @@
     - Futility pruning
   - Reduction
     - Late move reduction
+    - Internal iterative reduction
 - Evaluation
   - Material
   - Piece-square table
@@ -39,3 +40,8 @@
 - Time management
   - Soft limit 2% remaining + 50% increment
   - Hard limit 50% remaining
+
+## Thanks
+People in the MinusKelvin & Engine Programming discord server for helping me, they are very cool ❤️
+
+Chess programming wiki for its resources
