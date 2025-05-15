@@ -156,10 +156,8 @@ bool is_see(Board& board, u16 move, i32 threshold)
     i8 piece_from = board.get_piece_at(from);
     i8 piece_to = board.get_piece_at(to);
 
-    assert(piece_to != piece::NONE);
-
-    // If we still lose after making the capture, then stop
-    i32 value = SEE_VALUE[piece_to] - threshold;
+    // If we still lose after making the move, then stop
+    i32 value = (piece_to == piece::NONE ? 0 : SEE_VALUE[piece_to]) - threshold;
 
     if (value < 0) {
         return false;

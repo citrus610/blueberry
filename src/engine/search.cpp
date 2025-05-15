@@ -479,6 +479,16 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
                 eval + params::fp::BASE + lmr_depth * params::fp::COEF <= alpha) {
                 skip_quiets = true;
             }
+
+            // // SEE pruning
+            // i32 see_margin =
+            //     is_quiet ?
+            //     params::see::MARGIN_QUIET * depth :
+            //     params::see::MARGIN_NOISY * depth * depth;
+            
+            // if (!eval::is_see(data.board, moves[i], see_margin)) {
+            //     continue;
+            // }
         }
 
         // Makes
@@ -735,6 +745,11 @@ i32 Engine::qsearch(Data& data, i32 alpha, i32 beta)
     for (usize i = 0; i < moves.size(); ++i) {
         // Picks the move to search based on move ordering
         move::order::sort(moves, moves_scores, i);
+
+        // Skips quiets if we're in check and we've found non-mate score
+        if (is_in_check && best > -eval::score::MATE_FOUND && data.board.is_move_quiet(moves[i])) {
+            continue;
+        }
 
         // Pruning
         if (!is_in_check && best > -eval::score::MATE_FOUND) {
