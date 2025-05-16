@@ -11,6 +11,7 @@ i32 get(Board& board)
     score += eval::get_material(board);
     score += eval::get_table(board);
     score += eval::get_mobility(board);
+    score += eval::get_king_defense(board);
 
     // Gets midgame and engame values
     i32 midgame = score::get_midgame(score);
@@ -141,6 +142,26 @@ i32 get_mobility(Board& board)
     return mobility[0] - mobility[1];
 };
 
+i32 get_king_defense(Board& board)
+{
+    i32 defense[2] = { 0, 0 };
+
+    const u64 minor =
+        board.get_pieces(piece::type::PAWN) |
+        board.get_pieces(piece::type::KNIGHT) |
+        board.get_pieces(piece::type::BISHOP);
+
+    for (i8 color = color::WHITE; color < 2; ++color) {
+        const i8 king_square = board.get_king_square(color);
+        const u64 defender = minor & board.get_colors(color) & attack::get_king(king_square);
+        const i32 count = bitboard::get_count(defender);
+
+        defense[color] += eval::DEFAULT.king_defense[count];
+    }
+
+    return defense[0] - defense[1];
+};
+
 // Static exchange evaluation
 // Copied from Weiss
 bool is_see(Board& board, u16 move, i32 threshold)
@@ -166,7 +187,7 @@ bool is_see(Board& board, u16 move, i32 threshold)
     // If we still win after losing the piece, then stop
     value -= SEE_VALUE[piece_from];
 
-    if (value > 0) {
+    if (value >= 0) {
         return true;
     }
 

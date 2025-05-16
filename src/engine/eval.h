@@ -59,6 +59,8 @@ struct Weight
     i32 mobility_rook[15];
     i32 mobility_queen[28];
 
+    i32 king_defense[9];
+
     i32 tempo;
 };
 
@@ -144,6 +146,10 @@ constexpr Weight MG = Weight {
     },
     .mobility_queen = {
         -50, -40, -25, -20, -15, -10, -5, 0, 5, 10, 10, 15, 15, 20, 20, 20, 25, 15, 15, 15, 25, 35, 35, 30, 10, 10, -20, -20
+    },
+
+    .king_defense = {
+        -35, -15, 0, 15, 20, 25, 30, 15, 15
     }
 };
 
@@ -229,6 +235,10 @@ constexpr Weight EG = Weight {
     },
     .mobility_queen = {
         -50, -40, -25, -20, -15, -10, -5, 0, 5, 10, 10, 15, 15, 20, 20, 20, 25, 15, 15, 15, 25, 35, 35, 30, 10, 10, -20, -20
+    },
+
+    .king_defense = {
+        -5, 0, 5, 5, 5, 0, -5, -10, -10
     }
 };
 
@@ -264,6 +274,10 @@ constexpr Weight DEFAULT = [] {
         SW(mobility_queen[i], w, MG, EG);
     }
 
+    for (i32 i = 0; i < 9; ++i) {
+        SW(king_defense[i], w, MG, EG);
+    }
+
     w.tempo = 20;
 
     return w;
@@ -276,6 +290,8 @@ i32 get_material(Board& board);
 i32 get_table(Board& board);
 
 i32 get_mobility(Board& board);
+
+i32 get_king_defense(Board& board);
 
 bool is_see(Board& board, u16 move, i32 threshold);
 

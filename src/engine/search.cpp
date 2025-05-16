@@ -479,16 +479,6 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
                 eval + params::fp::BASE + lmr_depth * params::fp::COEF <= alpha) {
                 skip_quiets = true;
             }
-
-            // // SEE pruning
-            // i32 see_margin =
-            //     is_quiet ?
-            //     params::see::MARGIN_QUIET * depth :
-            //     params::see::MARGIN_NOISY * depth * depth;
-            
-            // if (!eval::is_see(data.board, moves[i], see_margin)) {
-            //     continue;
-            // }
         }
 
         // Makes
