@@ -18,13 +18,6 @@ i32 get(Board& board)
     i32 endgame = score::get_endgame(score);
 
     // Calculates phase
-    const i32 PHASE_SCALE = 256;
-    const i32 PHASE_KNIGHT = 1;
-    const i32 PHASE_BISHOP = 1;
-    const i32 PHASE_ROOK = 2;
-    const i32 PHASE_QUEEN = 4;
-    const i32 PHASE_MAX = PHASE_KNIGHT * 4 + PHASE_BISHOP * 4 + PHASE_ROOK * 4 + PHASE_QUEEN * 2;
-
     i32 phase = PHASE_MAX;
 
     phase -= bitboard::get_count(board.get_pieces(piece::type::KNIGHT)) * PHASE_KNIGHT;
@@ -34,8 +27,12 @@ i32 get(Board& board)
 
     phase = (phase * PHASE_SCALE + (PHASE_MAX / 2)) / PHASE_MAX;
 
+    // Gets endgame scale
+    // i32 scale = eval::get_scale(board, score);
+
     // Mixes midgame and endgame values
-    score = ((midgame * (PHASE_SCALE - phase)) + (endgame * phase)) / PHASE_SCALE;
+    // score = (midgame * (PHASE_SCALE - phase) + endgame * phase * scale / SCALE_MAX) / PHASE_SCALE;
+    score = (midgame * (PHASE_SCALE - phase) + endgame * phase) / PHASE_SCALE;
 
     // Returns score based on side to move with tempo
     return (board.get_color() == color::WHITE ? score : -score) + eval::DEFAULT.tempo;
@@ -162,6 +159,16 @@ i32 get_king_defense(Board& board)
     return defense[0] - defense[1];
 };
 
+i32 get_scale(Board& board, i32 eval)
+{
+    const i8 strong = eval > 0 ? color::WHITE : color::BLACK;
+    const u64 strong_pawn = board.get_pieces(piece::type::PAWN);
+    const i32 strong_pawn_count = bitboard::get_count(strong_pawn);
+    const i32 x = 8 - strong_pawn_count;
+
+    return SCALE_MAX - x * x;
+};
+
 // Static exchange evaluation
 // Copied from Weiss
 bool is_see(Board& board, u16 move, i32 threshold)
@@ -174,11 +181,11 @@ bool is_see(Board& board, u16 move, i32 threshold)
     // Move data
     i8 from = move::get_square_from(move);
     i8 to = move::get_square_to(move);
-    i8 piece_from = board.get_piece_at(from);
-    i8 piece_to = board.get_piece_at(to);
+    i8 piece_from = board.get_piece_type_at(from);
+    i8 piece_to = board.get_piece_type_at(to);
 
     // If we still lose after making the move, then stop
-    i32 value = (piece_to == piece::NONE ? 0 : SEE_VALUE[piece_to]) - threshold;
+    i32 value = (piece_to == piece::type::NONE ? 0 : SEE_VALUE[piece_to]) - threshold;
 
     if (value < 0) {
         return false;

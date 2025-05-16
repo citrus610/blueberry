@@ -38,10 +38,20 @@ namespace eval
 #define SW(p, w, mg, eg) w.p = score::create(mg.p, eg.p)
 
 // SEE piece values
-constexpr i32 SEE_VALUE[12] = {
-    100, 320, 330, 500, 900, 100000,
+constexpr i32 SEE_VALUE[6] = {
     100, 320, 330, 500, 900, 100000
 };
+
+// Endgame scale
+constexpr i32 SCALE_MAX = 128;
+
+// Phase
+const i32 PHASE_SCALE = 256;
+const i32 PHASE_KNIGHT = 1;
+const i32 PHASE_BISHOP = 1;
+const i32 PHASE_ROOK = 2;
+const i32 PHASE_QUEEN = 4;
+const i32 PHASE_MAX = PHASE_KNIGHT * 4 + PHASE_BISHOP * 4 + PHASE_ROOK * 4 + PHASE_QUEEN * 2;
 
 struct Weight
 {
@@ -293,6 +303,51 @@ i32 get_mobility(Board& board);
 
 i32 get_king_defense(Board& board);
 
+i32 get_scale(Board& board, i32 eval);
+
 bool is_see(Board& board, u16 move, i32 threshold);
+
+};
+
+namespace eval::test
+{
+
+inline void see()
+{
+    struct Test
+    {
+        std::string fen;
+        u16 move;
+        i32 value;
+        bool result;
+    };
+
+    std::vector<Test> tests = {
+        Test { .fen = "k6b/8/8/8/8/8/1p6/BK6 w - - 0 1", .move = move::get_make(square::A1, square::B2), .value = SEE_VALUE[piece::type::PAWN], .result = true },
+        Test { .fen = "k6b/8/8/8/8/2p5/1p6/BK6 w - - 0 1", .move = move::get_make(square::A1, square::B2), .value = SEE_VALUE[piece::type::PAWN], .result = false },
+        Test { .fen = "k7/8/8/8/8/2p5/1p6/BK6 w - - 0 1", .move = move::get_make(square::A1, square::B2), .value = SEE_VALUE[piece::type::PAWN], .result = false },
+        Test { .fen = "k7/8/8/8/8/2q5/1p6/BK6 w - - 0 1", .move = move::get_make(square::A1, square::B2), .value = SEE_VALUE[piece::type::PAWN], .result = true },
+        Test { .fen = "k6b/8/8/8/8/2q5/1p6/BK6 w - - 0 1", .move = move::get_make(square::A1, square::B2), .value = SEE_VALUE[piece::type::PAWN], .result = false },
+        Test { .fen = "rn2k2r/p3bpp1/2p4p/8/2P3Q1/1P1q4/P4P1P/RNB1K2R w KQkq - 0 8", .move = move::get_make(square::G4, square::G7), .value = 0, .result = true },
+        Test { .fen = "r1bq1rk1/pppp1Npp/2nb1n2/4p3/2B1P3/2P5/PP1P1PPP/RNBQK2R b KQ - 0 6", .move = move::get_make(square::F8, square::F7), .value = 0, .result = true },
+        Test { .fen = "r1bqkb1r/ppp1pppp/2n2n2/8/2BPP3/5P2/PP4PP/RNBQK1NR b KQkq - 0 5", .move = move::get_make(square::C6, square::D4), .value = 0, .result = true },
+        Test { .fen = "3b2k1/1b6/8/3R2p1/4K3/5N2/8/8 w - - 0 1", .move = move::get_make(square::F3, square::G5), .value = 0, .result = false },
+        Test { .fen = "5k2/1b6/8/3B4/4K3/8/8/8 w - - 0 1", .move = move::get_make(square::D5, square::B7), .value = 0, .result = true },
+    };
+
+    i32 index = 0;
+
+    for (auto& test : tests) {
+        auto board = Board(test.fen);
+
+        std::cout << "test #" << index << ":" << std::endl;
+        std::cout << " - " << test.fen << " " << move::get_str(test.move) << std::endl;
+        std::cout << " - " << "result: " << eval::is_see(board, test.move, test.value) << std::endl;
+        std::cout << " - " << "expect: " << test.result << std::endl;
+        std::cout << std::endl;
+
+        index += 1;
+    }
+};
 
 };
