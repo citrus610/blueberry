@@ -16,6 +16,8 @@
   - Principle variation search
   - Quiescence search
     - Check evasion
+    - Futility pruning
+    - SEE pruning
   - Transposition table
     - Depth-preferred with aging replacement scheme
   - Move ordering
@@ -23,20 +25,19 @@
     - MVV/LVA
     - Killer moves
     - History heuristic
-  - Extensions
+  - Selectivity
     - Check extensions
-  - Pruning
     - Reverse futility pruning
     - Null move pruning
     - Late move pruning
     - Futility pruning
-  - Reduction
     - Late move reduction
     - Internal iterative reduction
 - Evaluation
   - Material
   - Piece-square table
   - Mobility
+  - King defenders
 - Time management
   - Soft limit 2% remaining + 50% increment
   - Hard limit 50% remaining
@@ -44,4 +45,4 @@
 ## Thanks
 - People in the MinusKelvin & Engine Programming discord server for helping me, they are very cool ❤️
 - Disservin's [chess-library](https://github.com/Disservin/chess-library) for helping understand move generation
-- Chess programming wiki for its resources
+- [Chess programming wiki](https://www.chessprogramming.org/Main_Page) for its resources
