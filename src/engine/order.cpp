@@ -43,7 +43,16 @@ arrayvec<i32, move::MAX> get_score(const arrayvec<u16, move::MAX>& moves, search
             }
 
             // MVV LVA
-            scores.add(MVV_LVA[captured][piece::get_type(piece)] + MVV_LVA_SCORE);
+            i32 mvv_lva = MVV_LVA[captured][piece::get_type(piece)];
+
+            // SEE
+            if (eval::is_see(data.board, moves[i], 0)) {
+                scores.add(mvv_lva + MVV_LVA_SCORE);
+            }
+            else {
+                scores.add(mvv_lva - MVV_LVA_SCORE);
+            }
+
             continue;
         }
 
