@@ -23,6 +23,7 @@
   - Move ordering
     - Hash moves
     - MVV/LVA
+    - SEE
     - Killer moves
     - History heuristic
   - Selectivity
@@ -31,6 +32,7 @@
     - Null move pruning
     - Late move pruning
     - Futility pruning
+    - SEE pruning
     - Late move reduction
     - Internal iterative reduction
 - Evaluation
