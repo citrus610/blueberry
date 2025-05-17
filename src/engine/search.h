@@ -54,9 +54,8 @@ namespace lmr
 
 namespace see
 {
-    constexpr i32 DEPTH = 4;
-    constexpr i32 MARGIN_QUIET = -50;
-    constexpr i32 MARGIN_NOISY = -100;
+    constexpr i32 MARGIN_QUIET = -100;
+    constexpr i32 MARGIN_NOISY = -25;
     constexpr i32 QS_MARGIN = -50;
 };
 
