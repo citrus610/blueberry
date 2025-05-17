@@ -27,7 +27,7 @@ arrayvec<i32, move::MAX> get_score(const arrayvec<u16, move::MAX>& moves, search
             i8 captured = data.board.get_captured_type(moves[i]);
 
             // Gets score
-            i32 score = eval::SEE_VALUE[captured] + data.history_noisy.get(data.board, moves[i], captured);
+            i32 score = eval::SEE_VALUE[captured] * 16 + data.history_noisy.get(data.board, moves[i], captured);
 
             // SEE
             if (eval::is_see(data.board, moves[i], 0)) {

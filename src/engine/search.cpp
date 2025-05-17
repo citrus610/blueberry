@@ -56,17 +56,24 @@ void PV::update(u16 move, const PV& other)
     this->count = other.count + 1;
 };
 
-void Data::clear()
+Data::Data(Board board)
 {
-    for (i32 i = 0; i < MAX_PLY; ++i) {
-        this->pvs[i].clear();
-    }
+    this->board = board;
 
     this->history_quiet = history::Quiet();
     this->history_noisy = history::Noisy();
 
-    this->board = Board();
+    this->clear();
+};
+
+// Clears for search
+void Data::clear()
+{
     this->ply = 0;
+
+    for (i32 i = 0; i < MAX_PLY; ++i) {
+        this->pvs[i].clear();
+    }
 
     for (i32 i = 0; i < MAX_PLY; ++i) {
         this->killers[i] = move::NONE;
@@ -126,6 +133,9 @@ bool Engine::search(Board uci_board, Settings uci_setting)
     this->running.test_and_set();
 
     this->thread = new std::thread([&] (Board board, Settings settings) {
+        // Inits search data
+        auto data = Data(board);
+
         // Storing best pv lines found in each iteration
         std::vector<PV> pv_history = {};
 
@@ -134,11 +144,8 @@ bool Engine::search(Board uci_board, Settings uci_setting)
 
         // Iterative deepening
         for (i32 i = 1; i < settings.depth; ++i) {
-            // Inits search data
-            Data data;
+            // Clear search data
             data.clear();
-
-            data.board = board;
 
             // Principle variation search
             auto time_1 = std::chrono::high_resolution_clock::now();
@@ -557,7 +564,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         // Fail-soft cutoff
         if (score >= beta) {
             // History bonus
-            const i32 bonus = 300 * depth - 250;
+            const i32 bonus = params::history::BONUS_COEF * depth + params::history::BONUS_BIAS;
 
             if (is_quiet) {
                 // Stores killer moves
@@ -571,12 +578,13 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
                 }
             }
             else {
-                // Updates capture history
+                // Updates noisy history
                 data.history_noisy.update(data.board, moves[i], bonus);
+            }
 
-                for (usize k = 0; k < noisys.size(); ++k) {
-                    data.history_noisy.update(data.board, noisys[k], -bonus);
-                }
+            // Even if the best move wasn't noisy, we still decrease the other noisy moves' history scores
+            for (usize k = 0; k < noisys.size(); ++k) {
+                data.history_noisy.update(data.board, noisys[k], -bonus);
             }
 
             break;

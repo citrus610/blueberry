@@ -193,19 +193,11 @@ i8 Board::get_captured_type(u16 move)
 {
     assert(!this->is_move_quiet(move));
 
-    const i8 from = move::get_square_from(move);
-    const i8 to = move::get_square_to(move);
-    const i8 piece = this->get_piece_at(from);
-
-    assert(square::is_valid(from));
-    assert(square::is_valid(to));
-    assert(piece != piece::NONE);
-
     // Gets captured piece type
     i8 captured =
         move::get_type(move) == move::type::ENPASSANT ?
         piece::type::PAWN :
-        this->get_piece_type_at(to);
+        this->get_piece_type_at(move::get_square_to(move));
     
     // If this move is a promotion, we treat the captured piece as a pawn
     if (captured == piece::NONE) {

@@ -111,6 +111,8 @@ public:
     u64 nodes;
     i32 seldepth;
 public:
+    Data(Board board);
+public:
     void clear();
 };
 
