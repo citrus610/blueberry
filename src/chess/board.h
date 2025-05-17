@@ -46,9 +46,10 @@ public:
     i8 get_piece_type_at(i8 square);
     i8 get_color_at(i8 square);
     i8 get_piece_at(i8 square);
-    i8 get_king_square(i8 color);
     i8 get_castling_right();
     i8 get_enpassant_square();
+    i8 get_king_square(i8 color);
+    i8 get_captured_type(u16 move);
     i32 get_halfmove_count();
     i32 get_fullmove_count();
     i32 get_ply();

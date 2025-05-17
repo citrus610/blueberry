@@ -6,16 +6,8 @@ namespace move::order
 
 arrayvec<i32, move::MAX> get_score(const arrayvec<u16, move::MAX>& moves, search::Data& data, u16 hash_move)
 {
-    constexpr i32 MVV_LVA[5][6] = {
-        { 150, 140, 130, 120, 110, 100 },
-        { 250, 240, 230, 220, 210, 200 },
-        { 350, 340, 330, 320, 210, 300 },
-        { 450, 440, 430, 420, 410, 400 },
-        { 550, 540, 530, 520, 510, 500 }
-    };
-
-    constexpr i32 HASH_SCORE = 1000000;
-    constexpr i32 MVV_LVA_SCORE = 100000;
+    constexpr i32 HASH_SCORE = 10000000;
+    constexpr i32 NOISY_SCORE = 1000000;
     constexpr i32 KILLER_SCORE = 90000;
 
     auto scores = arrayvec<i32, move::MAX>();
@@ -32,25 +24,19 @@ arrayvec<i32, move::MAX> get_score(const arrayvec<u16, move::MAX>& moves, search
 
         if (!data.board.is_move_quiet(moves[i])) {
             // Gets captured piece type
-            i8 captured =
-                move::get_type(moves[i]) == move::type::ENPASSANT ?
-                piece::type::PAWN :
-                data.board.get_piece_type_at(move::get_square_to(moves[i]));
-            
-            // If this move is a promotion, we treat the captured piece as a pawn
-            if (captured == piece::NONE) {
-                captured = piece::type::PAWN;
-            }
+            i8 captured = data.board.get_captured_type(moves[i]);
 
-            // MVV LVA
-            i32 mvv_lva = MVV_LVA[captured][piece::get_type(piece)];
+            // Gets score
+            i32 score = eval::SEE_VALUE[captured] + data.history_noisy.get(data.board, moves[i], captured);
 
             // SEE
             if (eval::is_see(data.board, moves[i], 0)) {
-                scores.add(mvv_lva + MVV_LVA_SCORE);
+                // Good noisy :)
+                scores.add(score + NOISY_SCORE);
             }
             else {
-                scores.add(mvv_lva - MVV_LVA_SCORE);
+                // Bad noisy :(
+                scores.add(score - NOISY_SCORE);
             }
 
             continue;
@@ -63,7 +49,7 @@ arrayvec<i32, move::MAX> get_score(const arrayvec<u16, move::MAX>& moves, search
         }
 
         // History
-        scores.add(data.history.get(data.board, moves[i]));
+        scores.add(data.history_quiet.get(data.board, moves[i]));
     }
 
     return scores;

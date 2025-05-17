@@ -3,7 +3,7 @@
 namespace history
 {
 
-Table::Table()
+Quiet::Quiet()
 {
     for (i32 p = 0; p < 12; ++p) {
         for (i32 sq = 0; sq < 64; ++sq) {
@@ -12,32 +12,60 @@ Table::Table()
     }
 };
 
-i32 Table::get(Board& board, u16 move)
+i32& Quiet::get(Board& board, const u16& move)
 {
     const i8 from = move::get_square_from(move);
     const i8 to = move::get_square_to(move);
+    const i8 piece = board.get_piece_at(from);
 
     assert(square::is_valid(from));
     assert(square::is_valid(to));
-    assert(board.get_piece_at(from) != piece::NONE);
+    assert(piece != piece::NONE);
 
-    return this->data[board.get_piece_at(from)][to];
+    return this->data[piece][to];
 };
 
-void Table::update(Board& board, u16 move, i32 bonus)
+void Quiet::update(Board& board, const u16& move, i32 bonus)
 {
-    const i8 from = move::get_square_from(move);
-    const i8 to = move::get_square_to(move);
-
-    assert(square::is_valid(from));
-    assert(square::is_valid(to));
-    assert(board.get_piece_at(from) != piece::NONE);
-
+    auto& entry = this->get(board, move);
     bonus = std::clamp(bonus, -MAX, MAX);
-
-    auto& entry = this->data[board.get_piece_at(from)][to];
     entry += bonus - entry * std::abs(bonus) / MAX;
 };
 
+Noisy::Noisy()
+{
+    for (i32 p = 0; p < 12; ++p) {
+        for (i32 sq = 0; sq < 64; ++sq) {
+            for (i32 c = 0; c < 6; ++c) {
+                this->data[p][sq][c] = 0;
+            }
+        }
+    }
+};
+
+i32& Noisy::get(Board& board, const u16& move)
+{
+    return this->get(board, move, board.get_captured_type(move));
+};
+
+i32& Noisy::get(Board& board, const u16& move, i8 captured)
+{
+    const i8 from = move::get_square_from(move);
+    const i8 to = move::get_square_to(move);
+    const i8 piece = board.get_piece_at(from);
+
+    assert(square::is_valid(from));
+    assert(square::is_valid(to));
+    assert(piece != piece::NONE);
+
+    return this->data[piece][to][captured];
+};
+
+void Noisy::update(Board& board, const u16& move, i32 bonus)
+{
+    auto& entry = this->get(board, move);
+    bonus = std::clamp(bonus, -MAX, MAX);
+    entry += bonus - entry * std::abs(bonus) / MAX;
+};
 
 };
