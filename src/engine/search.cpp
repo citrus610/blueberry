@@ -56,8 +56,21 @@ void PV::update(u16 move, const PV& other)
     this->count = other.count + 1;
 };
 
+Data::Data(Board board)
+{
+    this->board = board;
+
+    this->history_quiet = history::Quiet();
+    this->history_noisy = history::Noisy();
+
+    this->clear();
+};
+
+// Clears for search
 void Data::clear()
 {
+    this->ply = 0;
+
     for (i32 i = 0; i < MAX_PLY; ++i) {
         this->pvs[i].clear();
     }
@@ -65,11 +78,6 @@ void Data::clear()
     for (i32 i = 0; i < MAX_PLY; ++i) {
         this->killers[i] = move::NONE;
     }
-
-    this->history = history::Table();
-
-    this->board = Board();
-    this->ply = 0;
 
     for (i32 i = 0; i < MAX_PLY; ++i) {
         this->moves[i] = move::NONE;
@@ -125,6 +133,9 @@ bool Engine::search(Board uci_board, Settings uci_setting)
     this->running.test_and_set();
 
     this->thread = new std::thread([&] (Board board, Settings settings) {
+        // Inits search data
+        auto data = Data(board);
+
         // Storing best pv lines found in each iteration
         std::vector<PV> pv_history = {};
 
@@ -133,11 +144,8 @@ bool Engine::search(Board uci_board, Settings uci_setting)
 
         // Iterative deepening
         for (i32 i = 1; i < settings.depth; ++i) {
-            // Inits search data
-            Data data;
+            // Clear search data
             data.clear();
-
-            data.board = board;
 
             // Principle variation search
             auto time_1 = std::chrono::high_resolution_clock::now();
@@ -438,10 +446,13 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
     auto moves = move::generate::get_legal<move::generate::type::ALL>(data.board);
     auto moves_scores = move::order::get_score(moves, data, table_move);
 
+    // Moves seen list
     auto quiets = arrayvec<u16, move::MAX>();
+    auto noisys = arrayvec<u16, move::MAX>();
 
     i32 legals = 0;
 
+    // Skip quiets flag
     bool skip_quiets = false;
 
     // Iterates moves
@@ -552,26 +563,39 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
 
         // Fail-soft cutoff
         if (score >= beta) {
+            // History bonus
+            const i32 bonus = params::history::BONUS_COEF * depth + params::history::BONUS_BIAS;
+
             if (is_quiet) {
                 // Stores killer moves
                 data.killers[data.ply] = moves[i];
 
                 // Updates history table
-                const i32 bonus = 300 * depth - 250;
-
-                data.history.update(data.board, moves[i], bonus);
+                data.history_quiet.update(data.board, moves[i], bonus);
 
                 for (usize k = 0; k < quiets.size(); ++k) {
-                    data.history.update(data.board, quiets[k], -bonus);
+                    data.history_quiet.update(data.board, quiets[k], -bonus);
                 }
+            }
+            else {
+                // Updates noisy history
+                data.history_noisy.update(data.board, moves[i], bonus);
+            }
+
+            // Even if the best move wasn't noisy, we still decrease the other noisy moves' history scores
+            for (usize k = 0; k < noisys.size(); ++k) {
+                data.history_noisy.update(data.board, noisys[k], -bonus);
             }
 
             break;
         }
 
-        // Adds quiet moves
+        // Adds moves seen to list
         if (is_quiet) {
             quiets.add(moves[i]);
+        }
+        else {
+            noisys.add(moves[i]);
         }
     }
 

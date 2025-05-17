@@ -189,6 +189,24 @@ i8 Board::get_enpassant_square()
     return this->enpassant;
 };
 
+i8 Board::get_captured_type(u16 move)
+{
+    assert(!this->is_move_quiet(move));
+
+    // Gets captured piece type
+    i8 captured =
+        move::get_type(move) == move::type::ENPASSANT ?
+        piece::type::PAWN :
+        this->get_piece_type_at(move::get_square_to(move));
+    
+    // If this move is a promotion, we treat the captured piece as a pawn
+    if (captured == piece::NONE) {
+        captured = piece::type::PAWN;
+    }
+
+    return captured;
+};
+
 i32 Board::get_halfmove_count()
 {
     return this->halfmove;
