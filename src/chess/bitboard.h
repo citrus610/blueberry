@@ -47,6 +47,9 @@ constexpr u64 FILE_H = bitboard::FILE[file::FILE_H];
 
 constexpr u64 PROMOTION_RANKS = bitboard::RANK_1 | bitboard::RANK_8;
 
+constexpr u64 LIGHT = 0x55AA55AA55AA55AAULL;
+constexpr u64 DARK = 0xAA55AA55AA55AA55ULL;
+
 constexpr u64 create(i8 square)
 {
     assert(square::is_valid(square));
@@ -114,7 +117,45 @@ constexpr u64 get_pop_msb(u64 bitboard)
     return bitboard ^ (1Ull << bitboard::get_msb(bitboard));
 };
 
-template<i8 DIRECTION>
+constexpr u64 get_fill_up(u64 bitboard)
+{
+    bitboard |= bitboard << 8;
+    bitboard |= bitboard << 16;
+    bitboard |= bitboard << 32;
+
+    return bitboard;
+};
+
+constexpr u64 get_fill_down(u64 bitboard)
+{
+    bitboard |= bitboard >> 8;
+    bitboard |= bitboard >> 16;
+    bitboard |= bitboard >> 32;
+
+    return bitboard;
+};
+
+template <i8 COLOR>
+constexpr u64 get_fill_up_relative(u64 bitboard)
+{
+    if constexpr (COLOR == color::BLACK) {
+        return get_fill_down(bitboard);
+    }
+
+    get_fill_up(bitboard);
+};
+
+template <i8 COLOR>
+constexpr u64 get_fill_down_relative(u64 bitboard)
+{
+    if constexpr (COLOR == color::BLACK) {
+        return get_fill_up(bitboard);
+    }
+
+    get_fill_down(bitboard);
+};
+
+template <i8 DIRECTION>
 constexpr u64 get_shift(u64 bitboard)
 {
     switch (DIRECTION)

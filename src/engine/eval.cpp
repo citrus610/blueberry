@@ -7,11 +7,22 @@ i32 get(Board& board)
 {
     i32 score = 0;
 
+    // Info
+    const u64 pawn_white = board.get_pieces(piece::type::PAWN, color::WHITE);
+    const u64 pawn_black = board.get_pieces(piece::type::PAWN, color::BLACK);
+
+    const u64 semi_open_white = ~(bitboard::get_fill_up(pawn_white) | bitboard::get_fill_down(pawn_white));
+    const u64 semi_open_black = ~(bitboard::get_fill_up(pawn_black) | bitboard::get_fill_down(pawn_black));
+
     // Evaluates
     score += eval::get_material(board);
     score += eval::get_table(board);
     score += eval::get_mobility(board);
     score += eval::get_king_defense(board);
+    score += eval::get_bishop_pair(board);
+    score += eval::get_rook_file(board, semi_open_white, semi_open_black);
+    score += eval::get_king_file(board, semi_open_white, semi_open_black);
+    score += eval::get_pawn_structure(board);
 
     // Gets midgame and engame values
     i32 midgame = score::get_midgame(score);
@@ -159,10 +170,124 @@ i32 get_king_defense(Board& board)
     return defense[0] - defense[1];
 };
 
+i32 get_bishop_pair(Board& board)
+{
+    i32 bishop_pair = 0;
+
+    const u64 bishop_white = board.get_pieces(piece::type::BISHOP, color::WHITE);
+    const u64 bishop_black = board.get_pieces(piece::type::BISHOP, color::BLACK);
+
+    if (bitboard::is_many(bishop_white) && (bishop_white & bitboard::LIGHT) && (bishop_white & bitboard::DARK)) {
+        bishop_pair += eval::DEFAULT.bishop_pair;
+    }
+
+    if (bitboard::is_many(bishop_black) && (bishop_black & bitboard::LIGHT) && (bishop_black & bitboard::DARK)) {
+        bishop_pair -= eval::DEFAULT.bishop_pair;
+    }
+
+    return bishop_pair;
+};
+
+i32 get_rook_file(Board& board, u64 semi_open_white, u64 semi_open_black)
+{
+    i32 rook_file = 0;
+
+    const u64 open = semi_open_white & semi_open_black;
+
+    const u64 rook_white = board.get_pieces(piece::type::ROOK, color::WHITE);
+    const u64 rook_black = board.get_pieces(piece::type::ROOK, color::BLACK);
+
+    const u64 rook_open_white = rook_white & open;
+    const u64 rook_semi_open_white = rook_white & semi_open_white;
+
+    const u64 rook_open_black = rook_black & open;
+    const u64 rook_semi_open_black = rook_black & semi_open_black;
+
+    rook_file += bitboard::get_count(rook_open_white) * eval::DEFAULT.rook_open_file;
+    rook_file += bitboard::get_count(rook_semi_open_white) * eval::DEFAULT.rook_semi_open_file;
+
+    rook_file -= bitboard::get_count(rook_open_black) * eval::DEFAULT.rook_open_file;
+    rook_file -= bitboard::get_count(rook_semi_open_black) * eval::DEFAULT.rook_semi_open_file;
+
+    return rook_file;
+};
+
+i32 get_king_file(Board& board, u64 semi_open_white, u64 semi_open_black)
+{
+    i32 king_file = 0;
+
+    const u64 open = semi_open_white & semi_open_black;
+
+    const u64 king_white = board.get_pieces(piece::type::KING, color::WHITE);
+    const u64 king_black = board.get_pieces(piece::type::KING, color::BLACK);
+
+    const u64 king_open_white = king_white & open;
+    const u64 king_semi_open_white = king_white & semi_open_white;
+
+    const u64 king_open_black = king_black & open;
+    const u64 king_semi_open_black = king_black & semi_open_black;
+
+    king_file += bitboard::get_count(king_open_white) * eval::DEFAULT.king_open_file;
+    king_file += bitboard::get_count(king_semi_open_white) * eval::DEFAULT.king_semi_open_file;
+
+    king_file -= bitboard::get_count(king_open_black) * eval::DEFAULT.king_open_file;
+    king_file -= bitboard::get_count(king_semi_open_black) * eval::DEFAULT.king_semi_open_file;
+
+    return king_file;
+};
+
+i32 get_pawn_structure(Board& board)
+{
+    constexpr std::array<std::array<u64, 64>, 2> FORWARD_PASS = [] {
+        std::array<std::array<u64, 64>, 2> result = { 0ULL };
+
+        for (i8 color = 0; color < 2; ++color) {
+            for (i8 sq = 0; sq < 64; ++sq) {
+                u64 mask = bitboard::create(sq);
+
+                if (color == color::WHITE) {
+                    mask |= attack::get_pawn_left<color::WHITE>(bitboard::create(sq));
+                    mask |= attack::get_pawn_right<color::WHITE>(bitboard::create(sq));
+                    mask |= bitboard::get_fill_up(mask);
+                }
+                else {
+                    mask |= attack::get_pawn_left<color::BLACK>(bitboard::create(sq));
+                    mask |= attack::get_pawn_right<color::BLACK>(bitboard::create(sq));
+                    mask |= bitboard::get_fill_down(mask);
+                }
+
+                result[color][sq] = mask;
+            }
+        }
+    
+        return result;
+    } ();
+
+    i32 pawn_passed[2] = { 0, 0 };
+
+    for (i8 color = 0; color < 2; ++color) {
+        u64 pawn_us = board.get_pieces(piece::type::PAWN, color);
+        u64 pawn_them = board.get_pieces(piece::type::PAWN, !color);
+
+        while (pawn_us)
+        {
+            i8 sq = bitboard::get_lsb(pawn_us);
+            pawn_us = bitboard::get_pop_lsb(pawn_us);
+
+            if ((FORWARD_PASS[color][sq] & pawn_them) == 0) {
+                pawn_passed[color] += eval::DEFAULT.pawn_passed[rank::get_color_rank(square::get_rank(sq), color)];
+            }
+        }
+    }
+
+    return pawn_passed[0] - pawn_passed[1];
+};
+
+// Scales endgame eval based on the amount of pawn on the board
 i32 get_scale(Board& board, i32 eval)
 {
     const i8 strong = eval > 0 ? color::WHITE : color::BLACK;
-    const u64 strong_pawn = board.get_pieces(piece::type::PAWN);
+    const u64 strong_pawn = board.get_pieces(piece::type::PAWN, strong);
     const i32 strong_pawn_count = bitboard::get_count(strong_pawn);
     const i32 x = 8 - strong_pawn_count;
 

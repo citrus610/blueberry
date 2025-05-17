@@ -71,6 +71,16 @@ struct Weight
 
     i32 king_defense[9];
 
+    i32 bishop_pair;
+
+    i32 rook_open_file;
+    i32 rook_semi_open_file;
+
+    i32 king_open_file;
+    i32 king_semi_open_file;
+
+    i32 pawn_passed[8];
+
     i32 tempo;
 };
 
@@ -160,6 +170,18 @@ constexpr Weight MG = Weight {
 
     .king_defense = {
         -35, -15, 0, 15, 20, 25, 30, 15, 15
+    },
+
+    .bishop_pair = 25,
+
+    .rook_open_file = 50,
+    .rook_semi_open_file = 25,
+
+    .king_open_file = -75,
+    .king_semi_open_file = -30,
+
+    .pawn_passed = {
+        0, 0, -5, -10, 10, 15, 25, 0
     }
 };
 
@@ -249,6 +271,18 @@ constexpr Weight EG = Weight {
 
     .king_defense = {
         -5, 0, 5, 5, 5, 0, -5, -10, -10
+    },
+
+    .bishop_pair = 50,
+
+    .rook_open_file = 5,
+    .rook_semi_open_file = 10,
+
+    .king_open_file = 5,
+    .king_semi_open_file = 15,
+
+    .pawn_passed = {
+        0, 15, 20, 50, 75, 100, 150, 0
     }
 };
 
@@ -288,6 +322,18 @@ constexpr Weight DEFAULT = [] {
         SW(king_defense[i], w, MG, EG);
     }
 
+    SW(bishop_pair, w, MG, EG);
+
+    SW(rook_open_file, w, MG, EG);
+    SW(rook_semi_open_file, w, MG, EG);
+
+    SW(king_open_file, w, MG, EG);
+    SW(king_semi_open_file, w, MG, EG);
+
+    for (i32 i = 0; i < 8; ++i) {
+        SW(pawn_passed[i], w, MG, EG);
+    }
+
     w.tempo = 20;
 
     return w;
@@ -302,6 +348,14 @@ i32 get_table(Board& board);
 i32 get_mobility(Board& board);
 
 i32 get_king_defense(Board& board);
+
+i32 get_bishop_pair(Board& board);
+
+i32 get_rook_file(Board& board, u64 semi_open_white, u64 semi_open_black);
+
+i32 get_king_file(Board& board, u64 semi_open_white, u64 semi_open_black);
+
+i32 get_pawn_structure(Board& board);
 
 i32 get_scale(Board& board, i32 eval);
 
