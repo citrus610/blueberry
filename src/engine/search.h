@@ -47,6 +47,12 @@ namespace fp
     constexpr i32 QS_MARGIN = 150;
 };
 
+namespace hp
+{
+    constexpr i32 DEPTH = 6;
+    constexpr i32 MARGIN = -1024;
+};
+
 namespace lmr
 {
     constexpr i32 DEPTH = 3;
