@@ -30,4 +30,10 @@ public:
     void update(Board& board, const u16& move, i32 bonus);
 };
 
+inline void update(i32& entry, i32 bonus)
+{
+    bonus = std::clamp(bonus, -MAX, MAX);
+    entry += bonus - entry * std::abs(bonus) / MAX;
+};
+
 };

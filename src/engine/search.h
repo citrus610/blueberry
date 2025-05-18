@@ -59,6 +59,12 @@ namespace see
     constexpr i32 QS_MARGIN = -50;
 };
 
+namespace se
+{
+    constexpr i32 DEPTH = 6;
+    constexpr i32 DEPTH_TABLE_MARGIN = 3;
+};
+
 namespace history
 {
     constexpr i32 BONUS_COEF = 300;
@@ -137,7 +143,7 @@ public:
 public:
     i32 aspiration_window(Data& data, i32 depth, i32 score_old);
     template <bool PV>
-    i32 pvsearch(Data& data, i32 alpha, i32 beta, i32 depth);
+    i32 pvsearch(Data& data, i32 alpha, i32 beta, i32 depth, u16 excluded = move::NONE);
     template <bool PV>
     i32 qsearch(Data& data, i32 alpha, i32 beta);
 };

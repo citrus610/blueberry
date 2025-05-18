@@ -71,22 +71,27 @@ void Data::clear()
 {
     this->ply = 0;
 
+    // Clears pv table
     for (i32 i = 0; i < MAX_PLY; ++i) {
         this->pvs[i].clear();
     }
 
+    // Clears killer moves
     for (i32 i = 0; i < MAX_PLY; ++i) {
         this->killers[i] = move::NONE;
     }
 
+    // Clears moves stack
     for (i32 i = 0; i < MAX_PLY; ++i) {
         this->moves[i] = move::NONE;
     }
 
+    // Clears eval stack
     for (i32 i = 0; i < MAX_PLY; ++i) {
         this->evals[i] = eval::score::NONE;
     }
 
+    // Clears stat
     this->nodes = 0;
     this->seldepth = 0;
 };
@@ -265,7 +270,7 @@ i32 Engine::aspiration_window(Data& data, i32 depth, i32 score_old)
 
 // Principle variation search
 template <bool PV>
-i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
+i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth, u16 excluded)
 {
     // Gets is root node
     const bool is_root = data.ply == 0;
@@ -310,7 +315,8 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
     }
 
     // Probes transposition table
-    auto [table_hit, table_entry] = this->table.get(data.board.get_hash());
+    // Don't probe if we are in singular search
+    auto [table_hit, table_entry] = excluded ? std::make_pair(false, nullptr) : this->table.get(data.board.get_hash());
 
     u16 table_move = move::NONE;
     i32 table_eval = eval::score::NONE;
@@ -353,6 +359,11 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         data.evals[data.ply] = eval::score::NONE;
 
         goto loop;
+    }
+    else if (excluded) {
+        // We're in singular search so we've evaluated this position before
+        eval = data.evals[data.ply];
+        eval_static = data.evals[data.ply];
     }
     else if (table_hit) {
         // Gets the eval value from the table if possible, else gets the board's static eval
@@ -402,6 +413,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
 
     // Null move pruning
     if (!PV &&
+        !excluded &&
         data.moves[data.ply - 1] != move::NONE &&
         eval >= beta &&
         depth >= params::nmp::DEPTH &&
@@ -433,9 +445,6 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
     // Moves loop
     loop:
 
-    // Check extension
-    i32 extension = is_in_check;
-
     // Best score
     i32 best = -eval::score::INFINITE;
     u16 best_move = move::NONE;
@@ -459,9 +468,15 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
     for (usize i = 0; i < moves.size(); ++i) {
         // Picks the move to search based on move ordering
         move::order::sort(moves, moves_scores, i);
+        const u16 move = moves[i];
+
+        // Skips excluded move when we're in singular search
+        if (move == excluded) {
+            continue;
+        }
 
         // Checks if move is quiet
-        bool is_quiet = data.board.is_move_quiet(moves[i]);
+        bool is_quiet = data.board.is_move_quiet(move);
 
         // Skip quiets
         if (skip_quiets && is_quiet) {
@@ -497,14 +512,39 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
                 params::see::MARGIN_QUIET * lmr_depth :
                 params::see::MARGIN_NOISY * lmr_depth * lmr_depth;
             
-            if (!eval::is_see(data.board, moves[i], see_margin)) {
+            if (!eval::is_see(data.board, move, see_margin)) {
                 continue;
             }
         }
 
+        // Check extension
+        i32 extension = is_in_check;
+
+        // Singular extension
+        if (!is_root &&
+            !excluded &&
+            depth >= params::se::DEPTH &&
+            move == table_move &&
+            (table_bound & transposition::bound::LOWER) &&
+            std::abs(table_score) < eval::score::MATE_FOUND &&
+            table_depth >= depth - params::se::DEPTH_TABLE_MARGIN
+            ) {
+            // Gets singular search params
+            i32 singular_beta = table_score - depth;
+            i32 singular_depth = (depth - 1) / 2;
+
+            // Singular search
+            i32 singular_score = this->pvsearch<false>(data, singular_beta - 1, singular_beta, singular_depth, move);
+
+            // Extension
+            if (singular_score < singular_beta) {
+                extension = 1;
+            }
+        }
+
         // Makes
-        data.board.make(moves[i]);
-        data.moves[data.ply] = moves[i];
+        data.board.make(move);
+        data.moves[data.ply] = move;
         data.ply += 1;
 
         // Principle variation search
@@ -540,7 +580,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         }
 
         // Unmakes
-        data.board.unmake(moves[i]);
+        data.board.unmake(move);
         data.ply -= 1;
 
         // Aborts search
@@ -551,13 +591,13 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         // Updates values
         if (score > best) {
             best = score;
-            best_move = moves[i];
+            best_move = move;
 
             if (score > alpha) {
                 alpha = score;
     
                 // Updates pv line
-                data.pvs[data.ply].update(moves[i], data.pvs[data.ply + 1]);
+                data.pvs[data.ply].update(move, data.pvs[data.ply + 1]);
             }
         }
 
@@ -568,10 +608,10 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
 
             if (is_quiet) {
                 // Stores killer moves
-                data.killers[data.ply] = moves[i];
+                data.killers[data.ply] = move;
 
                 // Updates history table
-                data.history_quiet.update(data.board, moves[i], bonus);
+                data.history_quiet.update(data.board, move, bonus);
 
                 for (usize k = 0; k < quiets.size(); ++k) {
                     data.history_quiet.update(data.board, quiets[k], -bonus);
@@ -579,7 +619,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
             }
             else {
                 // Updates noisy history
-                data.history_noisy.update(data.board, moves[i], bonus);
+                data.history_noisy.update(data.board, move, bonus);
             }
 
             // Even if the best move wasn't noisy, we still decrease the other noisy moves' history scores
@@ -592,40 +632,49 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
 
         // Adds moves seen to list
         if (is_quiet) {
-            quiets.add(moves[i]);
+            quiets.add(move);
         }
         else {
-            noisys.add(moves[i]);
+            noisys.add(move);
         }
     }
 
     // Checks stalemate or checkmate
     if (moves.size() == 0) {
+        // Returns alpha if we're in singular search
+        if (excluded) {
+            return alpha;
+        }
+
+        // Checkmate
         if (is_in_check) {
             return -eval::score::MATE + data.ply;
         }
-        else {
-            return i32(data.nodes & 0b10) - 1;
-        }
+
+        // Stalemate
+        return i32(data.nodes & 0b10) - 1;
     }
 
     // Updates transposition table
-    u8 bound =
-        best >= beta ? transposition::bound::LOWER :
-        best > alpha_old ? transposition::bound::EXACT :
-        transposition::bound::UPPER;
-    
-    table_entry->set(
-        data.board.get_hash(),
-        best_move,
-        best,
-        eval_static,
-        depth,
-        this->table.age,
-        table_pv,
-        bound,
-        data.ply
-    );
+    // Don't do this if we're in singular search
+    if (!excluded) {
+        u8 bound =
+            best >= beta ? transposition::bound::LOWER :
+            best > alpha_old ? transposition::bound::EXACT :
+            transposition::bound::UPPER;
+        
+        table_entry->set(
+            data.board.get_hash(),
+            best_move,
+            best,
+            eval_static,
+            depth,
+            this->table.age,
+            table_pv,
+            bound,
+            data.ply
+        );
+    }
 
     return best;
 };
@@ -769,9 +818,10 @@ i32 Engine::qsearch(Data& data, i32 alpha, i32 beta)
     for (usize i = 0; i < moves.size(); ++i) {
         // Picks the move to search based on move ordering
         move::order::sort(moves, moves_scores, i);
+        const u16 move = moves[i];
 
         // Skips quiets if we're in check and we've found non-mate score
-        if (is_in_check && best > -eval::score::MATE_FOUND && data.board.is_move_quiet(moves[i])) {
+        if (is_in_check && best > -eval::score::MATE_FOUND && data.board.is_move_quiet(move)) {
             continue;
         }
 
@@ -780,27 +830,27 @@ i32 Engine::qsearch(Data& data, i32 alpha, i32 beta)
             // Futility pruning
             i32 futility = data.evals[data.ply] + params::fp::QS_MARGIN;
 
-            if (futility <= alpha && !eval::is_see(data.board, moves[i], 1)) {
+            if (futility <= alpha && !eval::is_see(data.board, move, 1)) {
                 best = std::max(best, futility);
                 continue;
             }
 
             // SEE pruning
-            if (!eval::is_see(data.board, moves[i], params::see::QS_MARGIN)) {
+            if (!eval::is_see(data.board, move, params::see::QS_MARGIN)) {
                 continue;
             }
         }
 
         // Makes
-        data.board.make(moves[i]);
-        data.moves[data.ply] = moves[i];
+        data.board.make(move);
+        data.moves[data.ply] = move;
         data.ply += 1;
 
         // Searches deeper
         i32 score = -this->qsearch<PV>(data, -beta, -alpha);
 
         // Unmakes
-        data.board.unmake(moves[i]);
+        data.board.unmake(move);
         data.ply -= 1;
 
         // Aborts search
@@ -811,13 +861,13 @@ i32 Engine::qsearch(Data& data, i32 alpha, i32 beta)
         // Updates values
         if (score > best) {
             best = score;
-            best_move = moves[i];
+            best_move = move;
 
             if (score > alpha) {
                 alpha = score;
 
                 // Updates pv line
-                data.pvs[data.ply].update(moves[i], data.pvs[data.ply + 1]);
+                data.pvs[data.ply].update(move, data.pvs[data.ply + 1]);
             }
         }
 
