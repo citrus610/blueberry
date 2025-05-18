@@ -22,7 +22,7 @@
     - Depth-preferred with aging replacement scheme
   - Move ordering
     - Hash moves
-    - MVV/LVA
+    - Capture history heuristic
     - SEE
     - Killer moves
     - History heuristic
@@ -39,12 +39,17 @@
   - Material
   - Piece-square table
   - Mobility
+  - Passed pawns
+  - Bishop pair
+  - Rook on open and semi-open files
   - King defenders
+  - King on open and semi-open files
+  - Endgame scaling
 - Time management
   - Soft limit 2% remaining + 50% increment
   - Hard limit 50% remaining
 
 ## Thanks
 - People in the MinusKelvin & Engine Programming discord server for helping me, they are very cool ❤️
-- Disservin's [chess-library](https://github.com/Disservin/chess-library) for helping understand move generation
+- Disservin's [chess-library](https://github.com/Disservin/chess-library) for helping me understand move generation
 - [Chess programming wiki](https://www.chessprogramming.org/Main_Page) for its resources
