@@ -446,7 +446,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
 
     // Moves seen list
     auto quiets = arrayvec<u16, move::MAX>();
-    auto noisys = arrayvec<u16, move::MAX>();
+    auto noisies = arrayvec<u16, move::MAX>();
 
     i32 legals = 0;
 
@@ -487,6 +487,16 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
                 lmr_depth <= params::fp::DEPTH &&
                 eval + params::fp::BASE + lmr_depth * params::fp::COEF <= alpha) {
                 skip_quiets = true;
+            }
+
+            // History pruning
+            if (is_quiet && depth <= params::hp::DEPTH) {
+                i32 history_score = data.history_quiet.get(data.board, moves[i]);
+
+                if (history_score < params::hp::MARGIN * depth) {
+                    skip_quiets = true;
+                    continue;
+                }
             }
 
             // SEE pruning
@@ -581,8 +591,8 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
             }
 
             // Even if the best move wasn't noisy, we still decrease the other noisy moves' history scores
-            for (usize k = 0; k < noisys.size(); ++k) {
-                data.history_noisy.update(data.board, noisys[k], -bonus);
+            for (usize k = 0; k < noisies.size(); ++k) {
+                data.history_noisy.update(data.board, noisies[k], -bonus);
             }
 
             break;
@@ -593,7 +603,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
             quiets.add(moves[i]);
         }
         else {
-            noisys.add(moves[i]);
+            noisies.add(moves[i]);
         }
     }
 
