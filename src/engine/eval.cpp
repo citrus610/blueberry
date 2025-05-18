@@ -39,11 +39,10 @@ i32 get(Board& board)
     phase = (phase * PHASE_SCALE + (PHASE_MAX / 2)) / PHASE_MAX;
 
     // Gets endgame scale
-    // i32 scale = eval::get_scale(board, score);
+    i32 scale = eval::get_scale(board, score);
 
     // Mixes midgame and endgame values
-    // score = (midgame * (PHASE_SCALE - phase) + endgame * phase * scale / SCALE_MAX) / PHASE_SCALE;
-    score = (midgame * (PHASE_SCALE - phase) + endgame * phase) / PHASE_SCALE;
+    score = (midgame * (PHASE_SCALE - phase) + endgame * phase * scale / SCALE_MAX) / PHASE_SCALE;
 
     // Returns score based on side to move with tempo
     return (board.get_color() == color::WHITE ? score : -score) + eval::DEFAULT.tempo;
