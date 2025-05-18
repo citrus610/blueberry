@@ -27,9 +27,7 @@ i32& Quiet::get(Board& board, const u16& move)
 
 void Quiet::update(Board& board, const u16& move, i32 bonus)
 {
-    auto& entry = this->get(board, move);
-    bonus = std::clamp(bonus, -MAX, MAX);
-    entry += bonus - entry * std::abs(bonus) / MAX;
+    history::update(this->get(board, move), bonus);
 };
 
 Noisy::Noisy()
@@ -63,9 +61,7 @@ i32& Noisy::get(Board& board, const u16& move, i8 captured)
 
 void Noisy::update(Board& board, const u16& move, i32 bonus)
 {
-    auto& entry = this->get(board, move);
-    bonus = std::clamp(bonus, -MAX, MAX);
-    entry += bonus - entry * std::abs(bonus) / MAX;
+    history::update(this->get(board, move), bonus);
 };
 
 };

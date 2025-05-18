@@ -6,9 +6,7 @@ namespace search::params
 
 namespace lmr
 {
-
-i32 TABLE[MAX_PLY][move::MAX];
-
+    i32 TABLE[MAX_PLY][move::MAX];
 };
 
 };
@@ -387,11 +385,6 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         );
     }
 
-    // Internal iterative reduction
-    if ((!table_hit || table_depth + 4 < depth) && depth >= 4) {
-        depth -= 1;
-    }
-
     // Reverse futility pruning
     if (!PV &&
         depth <= params::rfp::DEPTH &&
@@ -428,6 +421,11 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         if (score >= beta) {
             return score < eval::score::MATE_FOUND ? score : beta;
         }
+    }
+
+    // Internal iterative reduction
+    if ((!table_hit || table_depth + 4 < depth) && depth >= 4) {
+        depth -= 1;
     }
 
     // Moves loop
