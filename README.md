@@ -32,19 +32,25 @@
     - Null move pruning
     - Late move pruning
     - Futility pruning
+    - History pruning
     - SEE pruning
     - Late move reduction
     - Internal iterative reduction
 - Evaluation
+  - Tapered evaluation
+  - Endgame scaling
   - Material
+    - Pieces values
+    - Bishop pair
   - Piece-square table
   - Mobility
-  - Passed pawns
-  - Bishop pair
-  - Rook on open and semi-open files
-  - King defenders
-  - King on open and semi-open files
-  - Endgame scaling
+    - Pieces mobility
+    - Rooks on open and semi-open files
+  - Pawn structure
+    - Passed pawns
+  - Kings safety
+    - King defenders
+    - Kings on open and semi-open files
 - Time management
   - Soft limit 2% remaining + 50% increment
   - Hard limit 50% remaining
