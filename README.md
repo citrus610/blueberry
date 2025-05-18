@@ -51,5 +51,5 @@
 
 ## Thanks
 - People in the MinusKelvin & Engine Programming discord server for helping me, they are very cool ❤️
-- Disservin's [chess-library](https://github.com/Disservin/chess-library) for helping me understand move generation
+- Disservin's [chess-library](https://github.com/Disservin/chess-library) for helping me understand move generation (I copied most of the movegen code there, bad)
 - [Chess programming wiki](https://www.chessprogramming.org/Main_Page) for its resources
