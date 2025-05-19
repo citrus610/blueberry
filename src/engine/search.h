@@ -56,6 +56,7 @@ namespace hp
 namespace lmr
 {
     constexpr i32 DEPTH = 3;
+    constexpr i32 HISTORY_DIVISOR_QUIET = 8192;
 };
 
 namespace see

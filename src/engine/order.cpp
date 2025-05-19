@@ -6,10 +6,6 @@ namespace move::order
 
 arrayvec<i32, move::MAX> get_score(const arrayvec<u16, move::MAX>& moves, search::Data& data, u16 hash_move)
 {
-    constexpr i32 HASH_SCORE = 10000000;
-    constexpr i32 NOISY_SCORE = 1000000;
-    constexpr i32 KILLER_SCORE = 90000;
-
     auto scores = arrayvec<i32, move::MAX>();
 
     for (usize i = 0; i < moves.size(); ++i) {
