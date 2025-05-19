@@ -146,7 +146,7 @@ i16 Data::get_history_cont(const u16& move, i32 offset)
 
     const auto entry = this->cont_entries[this->ply - offset];
 
-    if (entry.is_valid()) {
+    if (!entry.is_valid()) {
         return 0;
     }
 
@@ -582,7 +582,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
 
             // History pruning
             if (is_quiet && depth <= params::hp::DEPTH) {
-                i32 history_score = data.history_quiet.get(data.board, moves[i]);
+                i32 history_score = data.get_history_quiet(moves[i]);
 
                 if (history_score < params::hp::MARGIN * depth) {
                     skip_quiets = true;
