@@ -45,7 +45,7 @@ arrayvec<i32, move::MAX> get_score(const arrayvec<u16, move::MAX>& moves, search
         }
 
         // History
-        scores.add(data.history_quiet.get(data.board, moves[i]));
+        scores.add(data.get_history_quiet(moves[i]));
     }
 
     return scores;

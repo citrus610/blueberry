@@ -109,7 +109,7 @@ public:
     u16 killers[MAX_PLY];
     u16 moves[MAX_PLY];
     i32 evals[MAX_PLY];
-    history::cont::Entry* history_cont_entries[MAX_PLY];
+    history::cont::Entry cont_entries[MAX_PLY];
 public:
     u64 nodes;
     i32 seldepth;
@@ -117,6 +117,16 @@ public:
     Data(Board board);
 public:
     void clear();
+public:
+    inline void make(const u16& move);
+    inline void unmake(const u16& move);
+    inline void make_null();
+    inline void unmake_null();
+public:
+    inline i16 get_history_quiet(const u16& move);
+    inline i16 get_history_noisy(const u16& move);
+    inline i16 get_history_cont(const u16& move, i32 offset);
+    inline void update_history_cont(const u16& move, i16 bonus, i32 offset);
 };
 
 class Engine

@@ -55,7 +55,7 @@ public:
     Entry();
     Entry(Board& board, const u16& move);
 public:
-    bool is_valid();
+    bool is_valid() const;
 };
 
 class Table
@@ -65,7 +65,7 @@ private:
 public:
     Table();
 public:
-    i16& get(Board& board, const u16& move);
+    i16& get(const Entry& entry, Board& board, const u16& move);
     void update(const Entry& entry, Board& board, const u16& move, i16 bonus);
 };
 
