@@ -84,7 +84,7 @@ void Data::clear()
     this->seldepth = 0;
 };
 
-inline void Data::make(const u16& move)
+void Data::make(const u16& move)
 {
     // Stores move
     this->moves[this->ply] = move;
@@ -99,13 +99,13 @@ inline void Data::make(const u16& move)
     this->ply += 1;
 };
 
-inline void Data::unmake(const u16& move)
+void Data::unmake(const u16& move)
 {
     this->board.unmake(move);
     this->ply -= 1;
 };
 
-inline void Data::make_null()
+void Data::make_null()
 {
     // Stores null move
     this->moves[this->ply] = move::NONE;
@@ -120,25 +120,25 @@ inline void Data::make_null()
     this->ply += 1;
 };
 
-inline void Data::unmake_null()
+void Data::unmake_null()
 {
     this->board.unmake_null();
     this->ply -= 1;
 };
 
-inline i16 Data::get_history_quiet(const u16& move)
+i16 Data::get_history_quiet(const u16& move)
 {
     return
         this->history_quiet.get(this->board, move) +
         this->get_history_cont(move, 1);
 };
 
-inline i16 Data::get_history_noisy(const u16& move)
+i16 Data::get_history_noisy(const u16& move)
 {
     return this->history_noisy.get(this->board, move);
 };
 
-inline i16 Data::get_history_cont(const u16& move, i32 offset)
+i16 Data::get_history_cont(const u16& move, i32 offset)
 {
     if (this->ply < offset) {
         return 0;
@@ -153,7 +153,7 @@ inline i16 Data::get_history_cont(const u16& move, i32 offset)
     return this->history_cont.get(entry, this->board, move);
 };
 
-inline void Data::update_history_cont(const u16& move, i16 bonus, i32 offset)
+void Data::update_history_cont(const u16& move, i16 bonus, i32 offset)
 {
     if (this->ply < offset) {
         return;
