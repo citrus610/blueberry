@@ -66,12 +66,6 @@ namespace see
     constexpr i32 QS_MARGIN = -50;
 };
 
-namespace history
-{
-    constexpr i32 BONUS_COEF = 300;
-    constexpr i32 BONUS_BIAS = -250;
-};
-
 };
 
 namespace search
@@ -108,12 +102,14 @@ public:
     Board board;
     i32 ply;
 public:
-    history::Quiet history_quiet;
-    history::Noisy history_noisy;
+    history::quiet::Table history_quiet;
+    history::noisy::Table history_noisy;
+    history::cont::Table history_cont;
 public:
     u16 killers[MAX_PLY];
     u16 moves[MAX_PLY];
     i32 evals[MAX_PLY];
+    history::cont::Entry* history_cont_entries[MAX_PLY];
 public:
     u64 nodes;
     i32 seldepth;

@@ -3,16 +3,15 @@
 namespace history
 {
 
-Quiet::Quiet()
+namespace quiet
 {
-    for (i32 p = 0; p < 12; ++p) {
-        for (i32 sq = 0; sq < 64; ++sq) {
-            this->data[p][sq] = 0;
-        }
-    }
+
+Table::Table()
+{
+    std::memset(this->data, 0, sizeof(this->data));
 };
 
-i32& Quiet::get(Board& board, const u16& move)
+i16& Table::get(Board& board, const u16& move)
 {
     const i8 from = move::get_square_from(move);
     const i8 to = move::get_square_to(move);
@@ -25,28 +24,27 @@ i32& Quiet::get(Board& board, const u16& move)
     return this->data[piece][to];
 };
 
-void Quiet::update(Board& board, const u16& move, i32 bonus)
+void Table::update(Board& board, const u16& move, i16 bonus)
 {
     history::update(this->get(board, move), bonus);
 };
 
-Noisy::Noisy()
-{
-    for (i32 p = 0; p < 12; ++p) {
-        for (i32 sq = 0; sq < 64; ++sq) {
-            for (i32 c = 0; c < 6; ++c) {
-                this->data[p][sq][c] = 0;
-            }
-        }
-    }
 };
 
-i32& Noisy::get(Board& board, const u16& move)
+namespace noisy
+{
+
+Table::Table()
+{
+    std::memset(this->data, 0, sizeof(this->data));
+};
+
+i16& Table::get(Board& board, const u16& move)
 {
     return this->get(board, move, board.get_captured_type(move));
 };
 
-i32& Noisy::get(Board& board, const u16& move, i8 captured)
+i16& Table::get(Board& board, const u16& move, i8 captured)
 {
     const i8 from = move::get_square_from(move);
     const i8 to = move::get_square_to(move);
@@ -59,9 +57,46 @@ i32& Noisy::get(Board& board, const u16& move, i8 captured)
     return this->data[piece][to][captured];
 };
 
-void Noisy::update(Board& board, const u16& move, i32 bonus)
+void Table::update(Board& board, const u16& move, i16 bonus)
 {
     history::update(this->get(board, move), bonus);
+};
+
+};
+
+namespace cont
+{
+
+Entry::Entry()
+{
+    this->piece = piece::NONE;
+    this->to = square::NONE;
+};
+
+Entry::Entry(Board& board, const u16& move)
+{
+    this->to = move::get_square_to(move);
+    this->piece = board.get_piece_at(move::get_square_from(move));
+};
+
+bool Entry::is_valid()
+{
+    return this->piece != piece::NONE && this->to != square::NONE;
+};
+
+Table::Table()
+{
+    std::memset(this->data, 0, sizeof(this->data));
+};
+
+i16& Table::get(Board& board, const u16& move)
+{
+
+};
+
+void Table::update(const Entry& entry, Board& board, const u16& move, i16 bonus)
+{
+
 };
 
 };

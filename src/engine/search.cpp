@@ -58,8 +58,9 @@ Data::Data(Board board)
 {
     this->board = board;
 
-    this->history_quiet = history::Quiet();
-    this->history_noisy = history::Noisy();
+    this->history_quiet = history::quiet::Table();
+    this->history_noisy = history::noisy::Table();
+    this->history_cont = history::cont::Table();
 
     this->clear();
 };
@@ -71,18 +72,10 @@ void Data::clear()
 
     for (i32 i = 0; i < MAX_PLY; ++i) {
         this->pvs[i].clear();
-    }
-
-    for (i32 i = 0; i < MAX_PLY; ++i) {
         this->killers[i] = move::NONE;
-    }
-
-    for (i32 i = 0; i < MAX_PLY; ++i) {
         this->moves[i] = move::NONE;
-    }
-
-    for (i32 i = 0; i < MAX_PLY; ++i) {
         this->evals[i] = eval::score::NONE;
+        this->history_cont_entries[i] = nullptr;
     }
 
     this->nodes = 0;
@@ -587,7 +580,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         // Fail-soft cutoff
         if (score >= beta) {
             // History bonus
-            const i32 bonus = params::history::BONUS_COEF * depth + params::history::BONUS_BIAS;
+            const i16 bonus = history::get_bonus(depth);
 
             if (is_quiet) {
                 // Stores killer moves
