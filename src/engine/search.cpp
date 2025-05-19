@@ -342,6 +342,9 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
     // Resets killer moves
     data.killers[data.ply + 1] = move::NONE;
 
+    // Improving
+    bool is_improving = false;
+
     // Gets static eval
     i32 eval = eval::score::NONE;
     i32 eval_static = eval::score::NONE;
@@ -350,6 +353,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         // Don't do anything if we are in check
         data.evals[data.ply] = eval::score::NONE;
 
+        // Skips pre-search prunings
         goto loop;
     }
     else if (table_hit) {
@@ -384,6 +388,9 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
             data.ply
         );
     }
+
+    // Gets improving heuristic if we're not in check
+    is_improving = data.ply >= 2 && data.evals[data.ply] > data.evals[data.ply - 2];
 
     // Reverse futility pruning
     if (!PV &&
@@ -473,7 +480,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         if (!is_root && best > -eval::score::MATE_FOUND) {
             // Late move pruning
             if (!skip_quiets &&
-                legals >= depth * depth + params::lmp::BASE) {
+                legals >= (params::lmp::BASE + depth * depth) / (2 - is_improving)) {
                 skip_quiets = true;
             }
 
