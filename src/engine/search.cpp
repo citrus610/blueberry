@@ -137,8 +137,8 @@ bool Engine::search(Board uci_board, Settings uci_setting)
         // Storing best pv lines found in each iteration
         std::vector<PV> pv_history = {};
 
-        // Search score
-        i32 score = -eval::score::INFINITE;
+        // Preivous search score
+        i32 score_old = -eval::score::INFINITE;
 
         // Iterative deepening
         for (i32 i = 1; i < settings.depth; ++i) {
@@ -148,9 +148,17 @@ bool Engine::search(Board uci_board, Settings uci_setting)
             // Principle variation search
             auto time_1 = std::chrono::high_resolution_clock::now();
 
-            score = this->aspiration_window(data, i, score);
+            i32 score = this->aspiration_window(data, i, score_old);
 
             auto time_2 = std::chrono::high_resolution_clock::now();
+
+            // Avoids returning false score when stopped early
+            if (timer::get_current() >= this->time_hard && !this->running.test()) {
+                score = score_old;
+            }
+            
+            // Updates score
+            score_old = score;
 
             // Saves pv line
             if (data.pvs[0].count != 0 && data.pvs[0].data[0] != move::NONE) {
