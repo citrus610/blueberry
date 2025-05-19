@@ -480,7 +480,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         if (!is_root && best > -eval::score::MATE_FOUND) {
             // Late move pruning
             if (!skip_quiets &&
-                legals >= params::lmp::BASE + depth * depth / (2 - is_improving)) {
+                legals >= (params::lmp::BASE + depth * depth) / (2 - is_improving)) {
                 skip_quiets = true;
             }
 
