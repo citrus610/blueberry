@@ -118,15 +118,15 @@ public:
 public:
     void clear();
 public:
-    inline void make(const u16& move);
-    inline void unmake(const u16& move);
-    inline void make_null();
-    inline void unmake_null();
+    void make(const u16& move);
+    void unmake(const u16& move);
+    void make_null();
+    void unmake_null();
 public:
-    inline i16 get_history_quiet(const u16& move);
-    inline i16 get_history_noisy(const u16& move);
-    inline i16 get_history_cont(const u16& move, i32 offset);
-    inline void update_history_cont(const u16& move, i16 bonus, i32 offset);
+    i16 get_history_quiet(const u16& move);
+    i16 get_history_noisy(const u16& move);
+    i16 get_history_cont(const u16& move, i32 offset);
+    void update_history_cont(const u16& move, i16 bonus, i32 offset);
 };
 
 class Engine

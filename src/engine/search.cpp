@@ -128,10 +128,9 @@ inline void Data::unmake_null()
 
 inline i16 Data::get_history_quiet(const u16& move)
 {
-    const i16 history_quiet = this->history_quiet.get(this->board, move);
-    const i16 history_counter = this->get_history_cont(move, 1);
-
-    return history_quiet + history_counter;
+    return
+        this->history_quiet.get(this->board, move) +
+        this->get_history_cont(move, 1);
 };
 
 inline i16 Data::get_history_noisy(const u16& move)
@@ -141,17 +140,17 @@ inline i16 Data::get_history_noisy(const u16& move)
 
 inline i16 Data::get_history_cont(const u16& move, i32 offset)
 {
-    i16 score = 0;
-
-    if (this->ply >= offset) {
-        const auto entry = this->cont_entries[this->ply - offset];
-
-        if (entry.is_valid()) {
-            score = this->history_cont.get(entry, this->board, move);
-        }
+    if (this->ply < offset) {
+        return 0;
     }
 
-    return score;
+    const auto entry = this->cont_entries[this->ply - offset];
+
+    if (entry.is_valid()) {
+        return 0;
+    }
+
+    return this->history_cont.get(entry, this->board, move);
 };
 
 inline void Data::update_history_cont(const u16& move, i16 bonus, i32 offset)
@@ -583,7 +582,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
 
             // History pruning
             if (is_quiet && depth <= params::hp::DEPTH) {
-                i32 history_score = data.get_history_quiet(data.board, moves[i]);
+                i32 history_score = data.history_quiet.get(data.board, moves[i]);
 
                 if (history_score < params::hp::MARGIN * depth) {
                     skip_quiets = true;

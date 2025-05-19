@@ -16,9 +16,7 @@ namespace quiet
 class Table
 {
 private:
-    i16 data[12][64];
-public:
-    Table();
+    i16 data[12][64] = { 0 };
 public:
     i16& get(Board& board, const u16& move);
     void update(Board& board, const u16& move, i16 bonus);
@@ -32,9 +30,7 @@ namespace noisy
 class Table
 {
 private:
-    i16 data[12][64][6];
-public:
-    Table();
+    i16 data[12][64][6] = { 0 };
 public:
     i16& get(Board& board, const u16& move);
     i16& get(Board& board, const u16& move, i8 captured);
@@ -61,9 +57,7 @@ public:
 class Table
 {
 private:
-    i16 data[12][64][12][64];
-public:
-    Table();
+    i16 data[12][64][12][64] = { 0 };
 public:
     i16& get(const Entry& entry, Board& board, const u16& move);
     void update(const Entry& entry, Board& board, const u16& move, i16 bonus);

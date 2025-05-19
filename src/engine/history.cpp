@@ -6,11 +6,6 @@ namespace history
 namespace quiet
 {
 
-Table::Table()
-{
-    std::memset(this->data, 0, sizeof(this->data));
-};
-
 i16& Table::get(Board& board, const u16& move)
 {
     const i8 to = move::get_square_to(move);
@@ -30,11 +25,6 @@ void Table::update(Board& board, const u16& move, i16 bonus)
 
 namespace noisy
 {
-
-Table::Table()
-{
-    std::memset(this->data, 0, sizeof(this->data));
-};
 
 i16& Table::get(Board& board, const u16& move)
 {
@@ -78,11 +68,6 @@ bool Entry::is_valid() const
     return this->piece != piece::NONE && this->to != square::NONE;
 };
 
-Table::Table()
-{
-    std::memset(this->data, 0, sizeof(this->data));
-};
-
 i16& Table::get(const Entry& entry, Board& board, const u16& move)
 {
     const i8 to = move::get_square_to(move);
@@ -96,6 +81,8 @@ i16& Table::get(const Entry& entry, Board& board, const u16& move)
 void Table::update(const Entry& entry, Board& board, const u16& move, i16 bonus)
 {
     history::update(this->get(entry, board, move), bonus);
+};
+
 };
 
 };
