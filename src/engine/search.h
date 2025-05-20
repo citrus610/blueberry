@@ -50,7 +50,7 @@ namespace fp
 namespace hp
 {
     constexpr i32 DEPTH = 6;
-    constexpr i32 MARGIN = -1024;
+    constexpr i32 MARGIN = -2048;
 };
 
 namespace lmr
