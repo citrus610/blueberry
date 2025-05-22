@@ -16,8 +16,6 @@ arrayvec<i32, move::MAX> get_score(const arrayvec<u16, move::MAX>& moves, search
         }
 
         // Noisy
-        i8 piece = data.board.get_piece_at(move::get_square_from(moves[i]));
-
         if (!data.board.is_move_quiet(moves[i])) {
             // Gets captured piece type
             i8 captured = data.board.get_captured_type(moves[i]);
@@ -45,7 +43,7 @@ arrayvec<i32, move::MAX> get_score(const arrayvec<u16, move::MAX>& moves, search
         }
 
         // History
-        scores.add(data.history_quiet.get(data.board, moves[i]));
+        scores.add(data.get_history_quiet(moves[i]));
     }
 
     return scores;

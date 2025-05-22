@@ -10,6 +10,7 @@
 #include <utility>
 #include <cstdio>
 #include <cstdint>
+#include <cstring>
 #include <cstddef>
 #include <cstdlib>
 #include <algorithm>

@@ -58,8 +58,9 @@ Data::Data(Board board)
 {
     this->board = board;
 
-    this->history_quiet = history::Quiet();
-    this->history_noisy = history::Noisy();
+    this->history_quiet = history::quiet::Table();
+    this->history_noisy = history::noisy::Table();
+    this->history_cont = history::cont::Table();
 
     this->clear();
 };
@@ -69,24 +70,102 @@ void Data::clear()
 {
     this->ply = 0;
 
+    // Clears stack
     for (i32 i = 0; i < MAX_PLY; ++i) {
         this->pvs[i].clear();
-    }
-
-    for (i32 i = 0; i < MAX_PLY; ++i) {
         this->killers[i] = move::NONE;
-    }
-
-    for (i32 i = 0; i < MAX_PLY; ++i) {
         this->moves[i] = move::NONE;
-    }
-
-    for (i32 i = 0; i < MAX_PLY; ++i) {
         this->evals[i] = eval::score::NONE;
+        this->cont_entries[i] = history::cont::Entry();
     }
 
+    // Clears stats
     this->nodes = 0;
     this->seldepth = 0;
+};
+
+void Data::make(const u16& move)
+{
+    // Stores move
+    this->moves[this->ply] = move;
+
+    // Gets continuation history entry
+    this->cont_entries[this->ply] = history::cont::Entry(this->board, move);
+
+    // Makes move
+    this->board.make(move);
+
+    // Updates ply
+    this->ply += 1;
+};
+
+void Data::unmake(const u16& move)
+{
+    this->board.unmake(move);
+    this->ply -= 1;
+};
+
+void Data::make_null()
+{
+    // Stores null move
+    this->moves[this->ply] = move::NONE;
+
+    // Clears continuation history entry
+    this->cont_entries[this->ply] = history::cont::Entry();
+
+    // Makes null move
+    this->board.make_null();
+
+    // Updates ply
+    this->ply += 1;
+};
+
+void Data::unmake_null()
+{
+    this->board.unmake_null();
+    this->ply -= 1;
+};
+
+i16 Data::get_history_quiet(const u16& move)
+{
+    return
+        this->history_quiet.get(this->board, move) +
+        this->get_history_cont(move, 1);
+};
+
+i16 Data::get_history_noisy(const u16& move)
+{
+    return this->history_noisy.get(this->board, move);
+};
+
+i16 Data::get_history_cont(const u16& move, i32 offset)
+{
+    if (this->ply < offset) {
+        return 0;
+    }
+
+    const auto entry = this->cont_entries[this->ply - offset];
+
+    if (!entry.is_valid()) {
+        return 0;
+    }
+
+    return this->history_cont.get(entry, this->board, move);
+};
+
+void Data::update_history_cont(const u16& move, i16 bonus, i32 offset)
+{
+    if (this->ply < offset) {
+        return;
+    }
+
+    const auto entry = this->cont_entries[this->ply - offset];
+
+    if (!entry.is_valid()) {
+        return;
+    }
+
+    this->history_cont.update(entry, this->board, move, bonus);
 };
 
 Engine::Engine()
@@ -421,16 +500,13 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
             std::min((eval - beta) / params::nmp::DIVISOR_EVAL, params::nmp::REDUCTION_EVAL_MAX);
         
         // Makes null move
-        data.board.make_null();
-        data.moves[data.ply] = move::NONE;
-        data.ply += 1;
+        data.make_null();
 
         // Scouts
         i32 score = -this->pvsearch<false>(data, -beta, -beta + 1, depth - reduction);
 
         // Unmakes
-        data.board.unmake_null();
-        data.ply -= 1;
+        data.unmake_null();
 
         // Returns score if fail high, we don't return false mate score
         if (score >= beta) {
@@ -506,7 +582,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
 
             // History pruning
             if (is_quiet && depth <= params::hp::DEPTH) {
-                i32 history_score = data.history_quiet.get(data.board, moves[i]);
+                i32 history_score = data.get_history_quiet(moves[i]);
 
                 if (history_score < params::hp::MARGIN * depth) {
                     skip_quiets = true;
@@ -526,9 +602,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         }
 
         // Makes
-        data.board.make(moves[i]);
-        data.moves[data.ply] = moves[i];
-        data.ply += 1;
+        data.make(moves[i]);
 
         // Principle variation search
         i32 score = -eval::score::INFINITE;
@@ -563,8 +637,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         }
 
         // Unmakes
-        data.board.unmake(moves[i]);
-        data.ply -= 1;
+        data.unmake(moves[i]);
 
         // Aborts search
         if (!this->running.test()) {
@@ -587,7 +660,7 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
         // Fail-soft cutoff
         if (score >= beta) {
             // History bonus
-            const i32 bonus = params::history::BONUS_COEF * depth + params::history::BONUS_BIAS;
+            const i16 bonus = history::get_bonus(depth);
 
             if (is_quiet) {
                 // Stores killer moves
@@ -595,9 +668,11 @@ i32 Engine::pvsearch(Data& data, i32 alpha, i32 beta, i32 depth)
 
                 // Updates history table
                 data.history_quiet.update(data.board, moves[i], bonus);
+                data.update_history_cont(moves[i], bonus, 1);
 
                 for (usize k = 0; k < quiets.size(); ++k) {
                     data.history_quiet.update(data.board, quiets[k], -bonus);
+                    data.update_history_cont(quiets[k], -bonus, 1);
                 }
             }
             else {
@@ -815,16 +890,13 @@ i32 Engine::qsearch(Data& data, i32 alpha, i32 beta)
         }
 
         // Makes
-        data.board.make(moves[i]);
-        data.moves[data.ply] = moves[i];
-        data.ply += 1;
+        data.make(moves[i]);
 
         // Searches deeper
         i32 score = -this->qsearch<PV>(data, -beta, -alpha);
 
         // Unmakes
-        data.board.unmake(moves[i]);
-        data.ply -= 1;
+        data.unmake(moves[i]);
 
         // Aborts search
         if (!this->running.test()) {

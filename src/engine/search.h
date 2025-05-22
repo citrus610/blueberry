@@ -50,7 +50,7 @@ namespace fp
 namespace hp
 {
     constexpr i32 DEPTH = 6;
-    constexpr i32 MARGIN = -1024;
+    constexpr i32 MARGIN = -2048;
 };
 
 namespace lmr
@@ -64,12 +64,6 @@ namespace see
     constexpr i32 MARGIN_QUIET = -100;
     constexpr i32 MARGIN_NOISY = -25;
     constexpr i32 QS_MARGIN = -50;
-};
-
-namespace history
-{
-    constexpr i32 BONUS_COEF = 300;
-    constexpr i32 BONUS_BIAS = -250;
 };
 
 };
@@ -108,12 +102,14 @@ public:
     Board board;
     i32 ply;
 public:
-    history::Quiet history_quiet;
-    history::Noisy history_noisy;
+    history::quiet::Table history_quiet;
+    history::noisy::Table history_noisy;
+    history::cont::Table history_cont;
 public:
     u16 killers[MAX_PLY];
     u16 moves[MAX_PLY];
     i32 evals[MAX_PLY];
+    history::cont::Entry cont_entries[MAX_PLY];
 public:
     u64 nodes;
     i32 seldepth;
@@ -121,6 +117,16 @@ public:
     Data(Board board);
 public:
     void clear();
+public:
+    void make(const u16& move);
+    void unmake(const u16& move);
+    void make_null();
+    void unmake_null();
+public:
+    i16 get_history_quiet(const u16& move);
+    i16 get_history_noisy(const u16& move);
+    i16 get_history_cont(const u16& move, i32 offset);
+    void update_history_cont(const u16& move, i16 bonus, i32 offset);
 };
 
 class Engine
